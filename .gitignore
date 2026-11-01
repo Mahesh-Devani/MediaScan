@@ -6,15 +6,15 @@ dist/
 
 # Logs and OS files
 *.log
-logfile.txt
+/logfile.txt
 .DS_Store
 Thumbs.db
 
-# Scratch and internal planning artifacts
-bytes10ms.csv
-summary.csv
-PLAN.md
-scratch/
+# Scratch and internal planning artifacts (root only)
+/bytes10ms.csv
+/summary.csv
+/PLAN.md
+/scratch/
 
 # IDE and Editor files
 .vscode/
