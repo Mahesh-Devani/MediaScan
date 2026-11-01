@@ -1,0 +1,20 @@
+{
+  "name": "mediascan",
+  "version": "1.0.0",
+  "description": "100% client-side PCAP/PCAPNG analyzer, RTP decoder, and Media Flow Ladder visualization",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "test": "node --experimental-strip-types --test test/**/*.test.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.5"
+  },
+  "dependencies": {
+    "@audio/decode-amr": "^1.3.1"
+  }
+}

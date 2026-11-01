@@ -1,0 +1,26 @@
+# Dependencies
+node_modules/
+
+# Production build outputs (built dynamically by GitHub Actions)
+dist/
+
+# Logs and OS files
+*.log
+logfile.txt
+.DS_Store
+Thumbs.db
+
+# Scratch and internal planning artifacts
+bytes10ms.csv
+summary.csv
+PLAN.md
+scratch/
+
+# IDE and Editor files
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?

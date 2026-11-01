@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MediaScan — 100% Client-Side PCAP SIP & RTP Analyzer</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <header>
+    <div class="logo-area">
+      <div class="logo-icon">&#x25B6;</div>
+      <div>
+        <h1>MediaScan</h1>
+        <div style="display: flex; gap: 8px; align-items: center; margin-top: 2px;">
+          <span class="badge-tag">100% Client-Side</span>
+          <span class="badge-tag">Zero Backend</span>
+          <span class="badge-tag" id="webcodecs-badge">WebCodecs Active</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="top-controls">
+      <div class="ms-override" id="ms-control" style="display: none;">
+        <span>Media Server IP:</span>
+        <select id="ms-select"></select>
+      </div>
+      <button class="btn btn-primary" id="btn-open-file">Open PCAP / PCAPNG</button>
+      <input type="file" id="file-input" accept=".pcap,.pcapng,.cap" style="display: none;">
+    </div>
+  </header>
+
+  <!-- Drag and drop zone -->
+  <div class="dropzone-container" id="dropzone-area">
+    <div class="dropzone" id="dropzone">
+      <div class="dropzone-icon">&#x1F4C1;</div>
+      <div class="dropzone-title">Drop your PCAP or PCAPNG file here</div>
+      <div class="dropzone-desc">Supports SIP + RTP, Ethernet, Linux Cooked (SLL), IPv4/IPv6, UDP, TCP. Heavy parsing runs in background Web Workers. Capture files never leave your computer.</div>
+      <button class="btn btn-primary" id="btn-select-file">Select PCAP File</button>
+    </div>
+  </div>
+
+  <!-- Main Analysis Dashboard -->
+  <div id="dashboard">
+    <nav class="nav-tabs">
+      <div class="nav-tab active" data-tab="tab-ladder">Media Flow Ladder</div>
+      <div class="nav-tab" data-tab="tab-sip">SIP Dialogs & Signaling</div>
+      <div class="nav-tab" data-tab="tab-rtp">RTP Audio Streams</div>
+      <div class="nav-tab" data-tab="tab-metrics">RTP Stream Metrics &amp; Telemetry</div>
+    </nav>
+
+    <!-- Tab 1: Media Flow Ladder -->
+    <div class="tab-content" id="tab-ladder">
+      <div class="conversation-controls">
+        <div style="display: flex; gap: 12px; align-items: center;">
+          <span style="font-weight: 600; font-size: 14px;">Select Conversation:</span>
+          <select id="conversation-select"></select>
+          <span class="badge-tag" id="conversation-badge">Conference (4 legs)</span>
+        </div>
+        <div style="display: flex; gap: 16px; align-items: center;">
+          <label style="font-size: 13px; color: var(--text-dim); display: flex; align-items: center; gap: 6px; cursor: pointer;">
+            <input type="checkbox" id="chk-sip-events" checked> Overlay SIP Events
+          </label>
+          <label style="font-size: 13px; color: var(--text-dim); display: flex; align-items: center; gap: 6px; cursor: pointer;">
+            <input type="checkbox" id="chk-detect-anomalies" checked> Call Anomalies
+          </label>
+          <label style="font-size: 13px; color: var(--text-dim); display: flex; align-items: center; gap: 6px; cursor: pointer;" title="Show RFC 4733 / RFC 2833 DTMF dual-tone keypad badges on stream arrows">
+            <input type="checkbox" id="chk-show-dtmf"> DTMF Badges
+          </label>
+        </div>
+      </div>
+
+      <div class="ladder-container" id="ladder-svg-container">
+        <!-- SVG ladder rendered dynamically -->
+      </div>
+    </div>
+
+    <!-- Tab 2: SIP Dialogs -->
+    <div class="tab-content" id="tab-sip" style="display: none;">
+      <h3 style="margin-bottom: 16px; font-size: 16px;">Detected SIP Media Dialogs</h3>
+      <table class="data-table" id="sip-table">
+        <thead>
+          <tr>
+            <th>Call-ID</th>
+            <th>State</th>
+            <th>Caller (From)</th>
+            <th>Callee (To)</th>
+            <th>Negotiated Codecs</th>
+            <th>SDP Media Ports (Remote &harr; MS)</th>
+            <th>Duration</th>
+          </tr>
+        </thead>
+        <tbody id="sip-tbody"></tbody>
+      </table>
+    </div>
+
+    <!-- Tab 3: RTP Audio Streams (Unified Multi-Track Player & Telemetry) -->
+    <div class="tab-content" id="tab-rtp" style="display: none;">
+      <div class="multitrack-container">
+        <!-- Master Transport & Actions Toolbar (Sticky Header for Seamless Scrolling) -->
+        <div class="multitrack-toolbar">
+          <!-- Row 1: Primary Transport, Time, Selection, Loop, Volume, Export -->
+          <div style="display: flex; align-items: center; justify-content: space-between; width: 100%; gap: 12px; flex-wrap: wrap;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <button class="btn btn-primary" id="btn-mt-toggle-play" style="padding: 7px 16px; font-size: 13px; font-weight: 700;">
+                &#x25B6; Play All (Mixed)
+              </button>
+              <button class="btn-ctrl-sec" id="btn-mt-skip-backward" title="Rewind 5s">&#x23EA; 5s</button>
+              <button class="btn-ctrl-sec" id="btn-mt-skip-forward" title="Forward 5s">5s &#x23E9;</button>
+              <span class="player-time-badge" style="font-size: 13px;">
+                <span id="mt-current-time">0:00.0</span> / <span id="mt-total-duration">0:00.0</span>
+              </span>
+            </div>
+
+            <!-- GoldWave-Style Time Selection Range Badge -->
+            <div id="mt-selection-badge" class="mt-selection-badge" style="display: none;">
+              <span class="sel-icon">&#x25A7;</span>
+              <span class="sel-title">Sel:</span>
+              <span id="mt-selection-range" class="sel-range">0:00.0 &ndash; 0:00.0 (0.0s)</span>
+              <button class="btn-clear-sel" id="btn-mt-clear-sel" title="Clear selection (Esc or double-click)">&#x2715;</button>
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <label class="mt-loop-label" title="Loop playback within selected range or session">
+                <input type="checkbox" id="chk-mt-loop">
+                <span>Loop</span>
+              </label>
+              <div class="volume-control-box">
+                <span style="font-size: 13px; color: var(--text-dim);">&#x1F50A;</span>
+                <input type="range" id="mt-volume-slider" min="0" max="1" step="0.02" value="0.8" style="width: 70px;">
+              </div>
+              <button class="btn btn-primary" id="btn-mt-export-mix" style="padding: 5px 12px; font-size: 12px;">
+                &#x2B07; Export Mixed WAV
+              </button>
+            </div>
+          </div>
+
+          <!-- Row 2: Conversation Filter, Stream Sorting, and Presets -->
+          <div style="display: flex; align-items: center; justify-content: space-between; width: 100%; gap: 12px; flex-wrap: wrap; border-top: 1px solid rgba(255, 255, 255, 0.08); padding-top: 8px;">
+            <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <span style="font-size: 12px; font-weight: 600; color: var(--text-dim);">Conversation:</span>
+                <select id="mt-conversation-select" class="mt-select" style="min-width: 220px;"></select>
+              </div>
+
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <span style="font-size: 12px; font-weight: 600; color: var(--text-dim);">Sort:</span>
+                <select id="mt-sort-select" class="mt-select">
+                  <option value="leg-pairs">Leg IN/OUT Pairs</option>
+                  <option value="in-first">Inbound First (All IN, then OUT)</option>
+                  <option value="out-first">Outbound First (All OUT, then IN)</option>
+                  <option value="chronological">Chronological (Start Time)</option>
+                </select>
+              </div>
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span style="font-size: 12px; color: var(--text-dim);">Presets:</span>
+              <button class="btn" id="btn-mt-filter-all" style="padding: 3px 8px; font-size: 11px;">Unmute All</button>
+              <button class="btn" id="btn-mt-filter-in" style="padding: 3px 8px; font-size: 11px;">Inbound Only</button>
+              <button class="btn" id="btn-mt-filter-out" style="padding: 3px 8px; font-size: 11px;">Outbound Only</button>
+              <button class="btn" id="btn-mt-mute-all" style="padding: 3px 8px; font-size: 11px;">Mute All</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Unified Side-by-Side Console: Left Control Gutter + Right Synchronized Waveforms -->
+        <div class="multitrack-console-window" id="mt-console-window">
+          <!-- Left Column: Stream controls & small SSRC/RTP ports -->
+          <div class="mt-left-column">
+            <div class="mt-header-gutter">
+              <span>RTP STREAMS &amp; PORTS</span>
+              <span class="mt-count-badge" id="mt-track-count">0 streams</span>
+            </div>
+            <div class="mt-tracks-gutter" id="mt-tracks-gutter"></div>
+          </div>
+
+          <!-- Right Column: Canvas Timeline Ruler & Waveform Tracks -->
+          <div class="mt-right-column" id="mt-canvas-wrap">
+            <canvas id="multitrack-canvas"></canvas>
+          </div>
+        </div>
+
+        <!-- Signal-to-Noise Ratio (SNR) Standalone Analysis Panel -->
+        <div class="snr-panel" id="snr-panel" style="margin-top: 14px; background-color: var(--bg-secondary); border: 1px solid var(--border); border-radius: 8px; padding: 14px 18px; display: flex; flex-direction: column; gap: 14px;">
+          <!-- Top Row: Title, Stream Selector, Mode Toggle, Filters -->
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; border-bottom: 1px solid rgba(255, 255, 255, 0.08); padding-bottom: 12px;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <span style="font-weight: 700; font-size: 15px; color: #fff; display: flex; align-items: center; gap: 6px;">
+                <span style="color: var(--accent);">&#x1F4CA;</span> Signal-to-Noise Ratio (SNR) Analysis
+              </span>
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <label for="snr-stream-select" style="font-size: 12px; color: var(--text-dim);">Target Stream:</label>
+                <select id="snr-stream-select" style="background: var(--bg-tertiary); color: #fff; border: 1px solid var(--border); border-radius: 4px; padding: 4px 8px; font-size: 12px;"></select>
+              </div>
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 14px; flex-wrap: wrap;">
+              <div class="btn-group" style="display: flex; gap: 4px;">
+                <button class="btn btn-sm active" id="btn-snr-mode-auto" style="padding: 4px 10px; font-size: 11px;">Auto VAD (Default)</button>
+                <button class="btn btn-sm" id="btn-snr-mode-manual" style="padding: 4px 10px; font-size: 11px;">Manual (2 Ranges)</button>
+              </div>
+
+              <div style="display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--text-dim);">
+                <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;" title="2nd-order Butterworth High-Pass Filter to remove DC offset and low-frequency rumble">
+                  <input type="checkbox" id="chk-snr-hpf" checked>
+                  <span>High-Pass (<span id="snr-hpf-cutoff-text">80Hz</span>)</span>
+                </label>
+                <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;" title="IEC 61672:2003 A-weighting acoustic perceptual curve">
+                  <input type="checkbox" id="chk-snr-aweight">
+                  <span>A-Weighting (dBA)</span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Second Row: Range Selection & Action Bar -->
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+            <div id="snr-auto-controls" style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+              <span style="font-size: 12px; font-weight: 600; color: var(--text-dim);">Stream Time Range:</span>
+              <input type="text" id="snr-input-start" value="0:00.000" style="width: 80px; background: var(--bg-tertiary); color: #fff; border: 1px solid var(--border); border-radius: 4px; padding: 4px 6px; font-family: monospace; font-size: 12px; text-align: center;">
+              <span style="font-size: 12px; color: var(--text-dim);">&ndash;</span>
+              <input type="text" id="snr-input-end" value="0:00.000" style="width: 80px; background: var(--bg-tertiary); color: #fff; border: 1px solid var(--border); border-radius: 4px; padding: 4px 6px; font-family: monospace; font-size: 12px; text-align: center;">
+              <button class="btn" id="btn-snr-whole-stream" style="padding: 4px 9px; font-size: 11px;" title="Reset range to whole stream duration">Whole Stream</button>
+              <button class="btn" id="btn-snr-from-canvas-sel" style="padding: 4px 9px; font-size: 11px;" title="Sync range from current MultiTrack canvas selection">From Canvas Sel</button>
+              <button class="btn btn-primary" id="btn-snr-run" style="padding: 4px 14px; font-size: 12px; font-weight: 700;">&#x25B6; Analyze SNR</button>
+              <button class="btn" id="btn-snr-save-range" style="padding: 4px 12px; font-size: 12px;" title="Save current range &amp; result for comparison">&#x1F4BE; Save Range</button>
+            </div>
+
+            <div id="snr-manual-controls" style="display: none; align-items: center; gap: 8px; flex-wrap: wrap;">
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <span style="font-size: 12px; color: #2ecc71; font-weight: 600;">Speech Range:</span>
+                <input type="text" id="snr-manual-sp-start" value="0:00.000" style="width: 72px; background: var(--bg-tertiary); color: #fff; border: 1px solid var(--border); border-radius: 4px; padding: 3px 5px; font-family: monospace; font-size: 11px; text-align: center;">
+                <span>&ndash;</span>
+                <input type="text" id="snr-manual-sp-end" value="0:00.000" style="width: 72px; background: var(--bg-tertiary); color: #fff; border: 1px solid var(--border); border-radius: 4px; padding: 3px 5px; font-family: monospace; font-size: 11px; text-align: center;">
+                <button class="btn" id="btn-snr-set-speech" style="padding: 3px 7px; font-size: 11px;" title="Set speech range from current canvas selection">Set From Sel</button>
+              </div>
+
+              <div style="display: flex; align-items: center; gap: 6px; margin-left: 8px;">
+                <span style="font-size: 12px; color: #f39c12; font-weight: 600;">Noise Range:</span>
+                <input type="text" id="snr-manual-ns-start" value="0:00.000" style="width: 72px; background: var(--bg-tertiary); color: #fff; border: 1px solid var(--border); border-radius: 4px; padding: 3px 5px; font-family: monospace; font-size: 11px; text-align: center;">
+                <span>&ndash;</span>
+                <input type="text" id="snr-manual-ns-end" value="0:00.000" style="width: 72px; background: var(--bg-tertiary); color: #fff; border: 1px solid var(--border); border-radius: 4px; padding: 3px 5px; font-family: monospace; font-size: 11px; text-align: center;">
+                <button class="btn" id="btn-snr-set-noise" style="padding: 3px 7px; font-size: 11px;" title="Set noise-only range from current canvas selection">Set From Sel</button>
+              </div>
+
+              <button class="btn btn-primary" id="btn-snr-run-manual" style="padding: 4px 14px; font-size: 12px; font-weight: 700;">&#x25B6; Analyze Manual</button>
+            </div>
+
+            <!-- Exact Range Badge -->
+            <span class="badge-tag" id="snr-exact-range-badge" style="font-size: 11px; font-family: monospace;">Exact: 0:00.000 &ndash; 0:00.000 (0.0s, 0 frames)</span>
+          </div>
+
+          <!-- Third Row: Primary Metrics Grid & Hero Score -->
+          <div style="display: grid; grid-template-columns: 240px 1fr; gap: 14px; align-items: stretch;">
+            <!-- Hero SNR Card -->
+            <div style="background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: 6px; padding: 14px 16px; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center;">
+              <span style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-dim); margin-bottom: 4px;">Signal-to-Noise Ratio</span>
+              <div style="display: flex; align-items: baseline; gap: 6px;">
+                <span id="snr-hero-val" style="font-size: 38px; font-weight: 800; color: #fff; font-family: monospace; line-height: 1;">--</span>
+                <span id="snr-hero-unit" style="font-size: 16px; font-weight: 700; color: var(--accent);">dB</span>
+              </div>
+              <div style="margin-top: 8px;">
+                <span id="snr-confidence-badge" class="badge-tag" style="background: rgba(46, 204, 113, 0.15); color: #2ecc71;">High Confidence</span>
+              </div>
+            </div>
+
+            <!-- Secondary Telemetry Grid -->
+            <div style="background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: 6px; padding: 12px 16px; display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; align-content: center;">
+              <div>
+                <div style="font-size: 11px; color: var(--text-dim);">Speech Level</div>
+                <div style="font-size: 16px; font-weight: 700; color: #fff; font-family: monospace;" id="snr-speech-level-val">-- dBFS</div>
+              </div>
+              <div>
+                <div style="font-size: 11px; color: var(--text-dim);">Noise Floor</div>
+                <div style="font-size: 16px; font-weight: 700; color: #fff; font-family: monospace;" id="snr-noise-floor-val">-- dBFS</div>
+              </div>
+              <div>
+                <div style="font-size: 11px; color: var(--text-dim);">Speech / Noise %</div>
+                <div style="font-size: 16px; font-weight: 700; color: #fff; font-family: monospace;" id="snr-frames-split-val">--% / --%</div>
+              </div>
+              <div>
+                <div style="font-size: 11px; color: var(--text-dim);">Speech / Noise Dur</div>
+                <div style="font-size: 14px; font-weight: 600; color: #fff; font-family: monospace;" id="snr-durations-val">0.0s / 0.0s</div>
+              </div>
+              <div>
+                <div style="font-size: 11px; color: var(--text-dim);">Codec &amp; Rate</div>
+                <div style="font-size: 13px; font-weight: 600; color: #fff;" id="snr-codec-meta-val">--</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Diagnostics Banner (shown on low confidence or cannot estimate) -->
+          <div id="snr-alert-banner" style="display: none; background: rgba(243, 156, 18, 0.12); border: 1px solid rgba(243, 156, 18, 0.4); border-radius: 6px; padding: 8px 12px; font-size: 12px; color: #f39c12; align-items: center; gap: 8px;">
+            <span style="font-size: 16px;">&#x26A0;</span>
+            <span id="snr-alert-text">Evaluation notes</span>
+          </div>
+
+          <!-- Fourth Row: Sliding-Window Time-Series Timeline Chart -->
+          <div style="background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: 6px; padding: 10px 14px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+              <span style="font-size: 12px; font-weight: 600; color: var(--text-dim);">Time-Windowed Sliding SNR Timeline (5s Window, 1s Hop)</span>
+              <span style="font-size: 11px; color: var(--text-dim); font-family: monospace;" id="snr-timeline-stats">Min: -- dB | Avg: -- dB | Max: -- dB</span>
+            </div>
+            <div style="width: 100%; height: 56px; position: relative;">
+              <canvas id="snr-timeline-canvas" height="56" style="width: 100%; height: 56px; display: block; border-radius: 4px; background: rgba(0, 0, 0, 0.25);"></canvas>
+            </div>
+          </div>
+
+          <!-- Domain Caveats & Telephony Badges -->
+          <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;" id="snr-caveats-box">
+            <span class="badge-tag" id="snr-badge-codec" style="font-size: 11px;">Codec: Unknown</span>
+            <span class="badge-tag" id="snr-badge-cn" style="font-size: 11px; display: none; background: rgba(231, 76, 60, 0.15); color: #e74c3c;">DTX / Comfort Noise Active</span>
+            <span class="badge-tag" id="snr-badge-ms" style="font-size: 11px; display: none;">Post-Media Server Capture</span>
+            <span class="badge-tag" id="snr-badge-conf" style="font-size: 11px; display: none;">Conference Composite</span>
+            <span style="font-size: 11px; color: var(--text-dim); margin-left: auto;">Values are dBFS-relative digital estimates, not acoustic sound pressure level (dBA SPL).</span>
+          </div>
+
+          <!-- Fifth Row: Saved Ranges & Comparison Table -->
+          <div id="snr-saved-ranges-container" style="display: none; border-top: 1px solid rgba(255, 255, 255, 0.08); padding-top: 12px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+              <span style="font-size: 13px; font-weight: 600; color: #fff;">Saved Ranges &amp; Comparison</span>
+              <div style="display: flex; gap: 8px;">
+                <button class="btn" id="btn-snr-export-csv" style="padding: 3px 9px; font-size: 11px;">&#x2B07; Export CSV</button>
+                <button class="btn" id="btn-snr-export-json" style="padding: 3px 9px; font-size: 11px;">&#x2B07; Export JSON</button>
+                <button class="btn" id="btn-snr-clear-saved" style="padding: 3px 9px; font-size: 11px;">Clear All</button>
+              </div>
+            </div>
+            <table class="data-table" style="font-size: 11px;" id="snr-saved-table">
+              <thead>
+                <tr>
+                  <th>Range Name</th>
+                  <th>Time Window</th>
+                  <th>Mode</th>
+                  <th>Speech Level</th>
+                  <th>Noise Floor</th>
+                  <th>SNR (dB)</th>
+                  <th>Speech / Noise %</th>
+                  <th>Confidence</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="snr-saved-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 4: RTP Stream Metrics & Telemetry -->
+    <div class="tab-content" id="tab-metrics" style="display: none;">
+      <div style="background-color: var(--bg-secondary); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; padding: 16px 20px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 12px;">
+          <div>
+            <h3 style="font-size: 16px; font-weight: 700; color: #fff; margin-bottom: 4px; display: flex; align-items: center; gap: 8px;">
+              <span>&#x1F4CA;</span> RTP Stream Metrics &amp; Telemetry
+            </h3>
+            <p style="font-size: 12px; color: var(--text-dim); margin: 0;">
+              Real-time per-stream packet loss, jitter, SSRC, endpoint ports, and synchronized dual-channel stereo call mixing.
+            </p>
+          </div>
+          <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <span style="font-size: 12px; font-weight: 600; color: var(--text-dim);">Filter / Mix Conversation:</span>
+              <select id="metrics-conv-select" class="mt-select" style="min-width: 200px;"></select>
+            </div>
+            <button class="btn btn-primary" id="btn-download-all-wav" title="Download stereo WAV for each two-way leg in the selected conversation (Left = Inbound Caller, Right = Outbound Media Server)">
+              &#x2B07; Download Stereo Call Mix (WAV)
+            </button>
+          </div>
+        </div>
+        <table class="data-table" id="rtp-table">
+          <thead>
+            <tr>
+              <th>SSRC</th>
+              <th>Payload Type / Codec</th>
+              <th>Direction</th>
+              <th>Source Endpoint (Port)</th>
+              <th>Destination Endpoint (Port)</th>
+              <th>Packets</th>
+              <th>Loss %</th>
+              <th>Jitter (ms)</th>
+              <th>Duration</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="rtp-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Audio Player Dock -->
+  <div class="player-dock" id="player-dock" style="display: none;">
+    <!-- Line 1: Media Bar (Waveform & Timeline Scrubber spanning full width) -->
+    <div class="media-bar-line">
+      <span class="player-time-badge" id="player-current-time">0:00.0</span>
+      <div class="waveform-container" id="waveform-container">
+        <canvas id="waveform" height="46"></canvas>
+      </div>
+      <span class="player-time-badge" id="player-duration">0:00.0</span>
+      <button class="btn-icon" id="btn-close-player-dock" title="Close player" style="font-size: 18px; padding: 4px 8px; color: var(--text-dim); line-height: 1; cursor: pointer; border-radius: 4px;">&times;</button>
+    </div>
+
+    <!-- Line 2: Stream Info & Control Actions -->
+    <div class="player-controls-line">
+      <div class="player-info">
+        <div class="player-title" id="player-stream-title">Stream SSRC: 1208512104</div>
+        <div class="player-meta" id="player-stream-meta">PCMU (PT 0) | 8000 Hz | Mono</div>
+      </div>
+
+      <div class="player-controls-cluster">
+        <button class="btn-ctrl-sec" id="btn-skip-backward" title="Skip back 5s">&#x23EA; 5s</button>
+        <button class="btn-play" id="btn-toggle-play" title="Play / Pause">&#x25B6;</button>
+        <button class="btn-ctrl-sec" id="btn-skip-forward" title="Skip forward 5s">5s &#x23E9;</button>
+      </div>
+
+      <div class="player-right-actions">
+        <div class="volume-control-box">
+          <button class="btn-icon" id="btn-volume-icon" title="Toggle Mute">&#x1F50A;</button>
+          <input type="range" id="volume-slider" min="0" max="1" step="0.01" value="0.8">
+        </div>
+
+        <label class="silence-toggle-label" title="Zero-stuff silence suppression gaps so playback spans full call duration">
+          <input type="checkbox" id="chk-fill-silence" checked>
+          <span>Full Duration (Keep Silence)</span>
+        </label>
+
+        <button class="btn btn-primary" id="btn-download-wav" style="padding: 6px 14px; font-size: 13px;">&#x2B07; Download WAV</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Video Player Modal / Dock -->
+  <div class="video-modal-overlay" id="video-modal" style="display: none;">
+    <div class="video-modal-content">
+      <div class="video-modal-header">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <span style="font-size: 18px;">&#x1F4F9;</span>
+          <span class="video-modal-title" id="video-stream-title">H.264 Video Stream</span>
+          <span class="badge-tag" id="video-stream-meta" style="font-size: 11px;">640x480 &bull; 30 fps</span>
+        </div>
+        <button class="btn-icon" id="btn-close-video-modal" title="Close video player" style="font-size: 20px; line-height: 1; cursor: pointer;">&times;</button>
+      </div>
+
+      <div class="video-canvas-wrapper">
+        <canvas id="video-canvas" width="640" height="480"></canvas>
+      </div>
+
+      <div class="video-modal-toolbar">
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <button class="btn btn-primary" id="btn-video-toggle-play" style="padding: 6px 14px; font-size: 12px;">&#x25B6; Play</button>
+          <span class="player-time-badge" id="video-current-time">0:00.0 / 0:00.0</span>
+          <span id="video-frame-counter" style="font-size: 11px; color: var(--text-dim);">Frame: 0 / 0</span>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <button class="btn-ctrl-sec" id="btn-video-download-raw" title="Download raw elementary bitstream (.264 / .ivf)">&#x2B07; Raw Bitstream</button>
+          <button class="btn btn-primary" id="btn-video-download-mp4" style="padding: 6px 14px; font-size: 12px;" title="Download standard MP4 container">&#x2B07; Download MP4</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>
