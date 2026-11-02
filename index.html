@@ -661,15 +661,15 @@
                 <span style="font-weight: 700; font-size: 13px; color: #fff; display: flex; align-items: center; gap: 6px;">
                   <span>🔬</span> Leg Comparison &amp; Noise Reduction (NR) Diagnostics
                 </span>
-                <span style="font-size: 11px; color: var(--text-dim);">Compare Inbound (Client &rarr; MS) vs Outbound (MS &rarr; Client) leg to evaluate NR efficacy and artifacts.</span>
+                <span style="font-size: 11px; color: var(--text-dim);">Compare a Talker's input leg (Pre-MS) to a Listener's output leg (Post-MS) to evaluate Media Server NR efficacy and artifacts.</span>
               </div>
               <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
                 <div style="display: flex; align-items: center; gap: 4px; font-size: 11px;">
-                  <label style="color: var(--text-dim);">Inbound:</label>
+                  <label style="color: var(--text-dim);" title="The talker's audio entering the Media Server">Input (Talker Pre-MS):</label>
                   <select id="dnsmos-compare-in-select" style="background: var(--bg-tertiary); color: #fff; border: 1px solid var(--border); border-radius: 4px; padding: 2px 6px; font-size: 11px;"></select>
                 </div>
                 <div style="display: flex; align-items: center; gap: 4px; font-size: 11px;">
-                  <label style="color: var(--text-dim);">Outbound:</label>
+                  <label style="color: var(--text-dim);" title="The listener's audio exiting the Media Server">Output (Listener Post-MS):</label>
                   <select id="dnsmos-compare-out-select" style="background: var(--bg-tertiary); color: #fff; border: 1px solid var(--border); border-radius: 4px; padding: 2px 6px; font-size: 11px;"></select>
                 </div>
                 <button class="btn btn-sm btn-primary" id="btn-dnsmos-compare" style="padding: 3px 10px; font-size: 11px;">
@@ -678,14 +678,19 @@
               </div>
             </div>
 
+            <div id="dnsmos-compare-flow-label" style="font-size: 11px; color: #7aa2f7; background: rgba(122, 162, 247, 0.1); border-radius: 4px; padding: 6px 10px; display: flex; align-items: center; gap: 8px;">
+              <span>💡</span>
+              <span><strong>How it works:</strong> Audio enters the Media Server on a talker's Inbound leg (e.g., Leg B IN), where noise reduction &amp; transcoding are applied. The MS forwards the processed audio out to other participants on their Outbound legs (e.g., Leg C OUT). Comparing an input leg to an output leg evaluates how the MS cleaned noise or altered speech quality.</span>
+            </div>
+
             <!-- Comparison Result Container -->
             <div id="dnsmos-comparison-result-box" style="display: none; background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: 6px; padding: 12px 14px;">
               <table class="data-table" style="font-size: 11px; margin-bottom: 10px;">
                 <thead>
                   <tr>
                     <th>Quality Metric</th>
-                    <th>Inbound Leg (Pre-MS)</th>
-                    <th>Outbound Leg (Post-MS)</th>
+                    <th id="dnsmos-th-inbound">Input Leg (Pre-MS)</th>
+                    <th id="dnsmos-th-outbound">Output Leg (Post-MS)</th>
                     <th>Delta (&Delta;)</th>
                   </tr>
                 </thead>

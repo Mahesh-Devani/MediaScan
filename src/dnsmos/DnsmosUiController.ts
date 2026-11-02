@@ -251,7 +251,8 @@ export class DnsmosUiController {
   }
 
   /**
-   * Populates comparison leg dropdowns and auto-pairs the first correlated leg.
+   * Populates comparison leg dropdowns and intelligently auto-pairs a Talker Inbound leg
+   * with a different Listener Outbound leg (e.g. Leg A IN -> Leg B OUT, or Leg B IN -> Leg C OUT).
    */
   private static populateComparisonSelectors(): void {
     const inSel = document.getElementById('dnsmos-compare-in-select') as HTMLSelectElement | null;
@@ -278,16 +279,75 @@ export class DnsmosUiController {
       outSel.appendChild(opt);
     }
 
-    // Auto-pair matched leg if available
+    // Intelligent auto-pairing: Pair Talker Inbound with a DIFFERENT Listener Outbound leg
     if (inTracks.length > 0 && outTracks.length > 0) {
-      // Find pair sharing the same legId
-      for (const inT of inTracks) {
-        const matchingOut = outTracks.find(outT => outT.legId && outT.legId === inT.legId);
-        if (matchingOut) {
-          inSel.value = String(inT.ssrc);
-          outSel.value = String(matchingOut.ssrc);
-          break;
+      const firstIn = inTracks[0];
+      inSel.value = String(firstIn.ssrc);
+
+      // Find an outbound track on a different leg (so it's the receiver of this talker's speech)
+      const diffLegOut = outTracks.find(outT => outT.legId && outT.legId !== firstIn.legId);
+      if (diffLegOut) {
+        outSel.value = String(diffLegOut.ssrc);
+      } else {
+        outSel.value = String(outTracks[0].ssrc);
+      }
+    }
+
+    // Dynamic flow explanation on selection change
+    inSel.onchange = () => {
+      const inSsrc = Number(inSel.value);
+      const inTrack = this.tracks.find(t => t.ssrc === inSsrc);
+      if (inTrack) {
+        const currentOutSsrc = Number(outSel.value);
+        const currentOutTrack = this.tracks.find(t => t.ssrc === currentOutSsrc);
+        // If current output is on the same leg, prefer switching to a different leg
+        if (currentOutTrack && currentOutTrack.legId === inTrack.legId) {
+          const alternateOut = outTracks.find(t => t.legId !== inTrack.legId);
+          if (alternateOut) {
+            outSel.value = String(alternateOut.ssrc);
+          }
         }
+      }
+      this.updateComparisonCallout();
+    };
+
+    outSel.onchange = () => {
+      this.updateComparisonCallout();
+    };
+
+    this.updateComparisonCallout();
+  }
+
+  /**
+   * Updates comparison flow label and table headers with the selected legs.
+   */
+  private static updateComparisonCallout(): void {
+    const inSel = document.getElementById('dnsmos-compare-in-select') as HTMLSelectElement | null;
+    const outSel = document.getElementById('dnsmos-compare-out-select') as HTMLSelectElement | null;
+    const flowLabel = document.getElementById('dnsmos-compare-flow-label');
+    const thIn = document.getElementById('dnsmos-th-inbound');
+    const thOut = document.getElementById('dnsmos-th-outbound');
+
+    if (!inSel || !outSel) return;
+    const inTrack = this.tracks.find(t => t.ssrc === Number(inSel.value));
+    const outTrack = this.tracks.find(t => t.ssrc === Number(outSel.value));
+    if (!inTrack || !outTrack) return;
+
+    if (thIn) thIn.textContent = `Input: ${inTrack.legId || 'Leg'} (Pre-MS)`;
+    if (thOut) thOut.textContent = `Output: ${outTrack.legId || 'Leg'} (Post-MS)`;
+
+    if (flowLabel) {
+      const isSameLeg = inTrack.legId === outTrack.legId;
+      if (isSameLeg) {
+        flowLabel.innerHTML = `
+          <span>🔄</span>
+          <span><strong>Loopback / Echo test:</strong> Comparing ${inTrack.legId} Inbound to ${outTrack.legId} Outbound. Note: In a conference call, outbound on the same leg contains other participants (mix-minus), not this talker.</span>
+        `;
+      } else {
+        flowLabel.innerHTML = `
+          <span>🗣️</span>
+          <span><strong>Audio Flow:</strong> Talker <strong>${inTrack.legId} (IN)</strong> ➔ Media Server (NR / Transcode) ➔ Listener <strong>${outTrack.legId} (OUT)</strong>. Evaluates how the MS processed ${inTrack.legId}'s voice before delivering it to ${outTrack.legId}.</span>
+        `;
       }
     }
   }
@@ -348,8 +408,17 @@ export class DnsmosUiController {
 
       this.currentResult = result;
       this.render();
-    } catch (err) {
+      const metaInfo = document.getElementById('dnsmos-meta-info');
+      if (metaInfo) {
+        metaInfo.style.color = 'var(--text-dim)';
+      }
+    } catch (err: any) {
       console.error('[DnsmosUiController] Analysis error:', err);
+      const metaInfo = document.getElementById('dnsmos-meta-info');
+      if (metaInfo) {
+        metaInfo.textContent = `❌ Evaluation error: ${err?.message || err}`;
+        metaInfo.style.color = '#f7768e';
+      }
     } finally {
       this.setAnalyzingState(false);
     }
@@ -811,10 +880,15 @@ export class DnsmosUiController {
   private static setAnalyzingState(busy: boolean): void {
     this.isAnalyzing = busy;
     const btn = document.getElementById('btn-dnsmos-run');
+    const metaInfo = document.getElementById('dnsmos-meta-info');
     if (btn) {
       if (busy) {
         btn.textContent = '⏳ Evaluating...';
         btn.setAttribute('disabled', 'true');
+        if (metaInfo) {
+          metaInfo.textContent = 'Running DNSMOS neural evaluation in Web Worker...';
+          metaInfo.style.color = '#2ac3de';
+        }
       } else {
         btn.textContent = '🧠 Analyze Speech Quality';
         btn.removeAttribute('disabled');

@@ -120,10 +120,24 @@ export async function processDnsmosTask(task: DnsmosWorkerTask): Promise<DnsmosR
     reasons,
   };
 
-  // 3. Initialize models
-  const baseUrl = task.options.modelBaseUrl || './';
-  const isPersonalized = !!task.options.isPersonalized;
-  const includeP808 = !!task.options.includeP808;
+  // 3. Initialize models & WASM runtime
+  let defaultBase = './';
+  if (typeof self !== 'undefined' && self.location && self.location.href) {
+    defaultBase = new URL('../', self.location.href).href;
+  }
+  const baseUrl = task.options?.modelBaseUrl || defaultBase;
+
+  if (typeof self !== 'undefined') {
+    const wasmBase = task.options?.wasmBaseUrl || (self.location && self.location.href ? new URL('../wasm/', self.location.href).href : './wasm/');
+    try {
+      ort.env.wasm.wasmPaths = wasmBase;
+    } catch (e) {
+      console.warn('[dnsmos.worker] Error setting wasmPaths:', e);
+    }
+  }
+
+  const isPersonalized = !!task.options?.isPersonalized;
+  const includeP808 = !!task.options?.includeP808;
 
   const sessP835 = await getOrInitP835Session(isPersonalized, baseUrl);
   const sessP808 = includeP808 ? await getOrInitP808Session(baseUrl) : null;

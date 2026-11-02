@@ -81,6 +81,12 @@ export class DnsmosEngine {
     const isBrowserWorkerAvailable = typeof Worker !== 'undefined' && typeof window !== 'undefined';
 
     if (isBrowserWorkerAvailable) {
+      const appBaseUrl = new URL('./', window.location.href).href;
+      task.options = {
+        ...options,
+        modelBaseUrl: options.modelBaseUrl || appBaseUrl,
+        wasmBaseUrl: options.wasmBaseUrl || `${appBaseUrl}wasm/`,
+      };
       result = await this.dispatchToWorker(task);
     } else {
       // Node.js direct execution (for unit & golden tests)
