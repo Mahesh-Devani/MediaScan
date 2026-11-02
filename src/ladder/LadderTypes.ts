@@ -22,6 +22,10 @@ export interface StreamSummary {
   isEncrypted: boolean;
   hasSilenceStuffing: boolean;
   telephoneEvents: Array<{ event: number; time: number; duration: number }>;
+  mos?: number;
+  mosLq?: number;
+  mosCq?: number;
+  rFactor?: number;
 }
 
 export interface Anomaly {
@@ -35,7 +39,9 @@ export interface Anomaly {
     | 'sequence_jump_duplicate'
     | 'large_packet_gap'
     | 'media_after_bye'
-    | 'sdp_port_mismatch';
+    | 'sdp_port_mismatch'
+    | 'low_mos'
+    | 'sustained_mos_degradation';
   description: string;
   packetNumber?: number;
   timestamp?: number;

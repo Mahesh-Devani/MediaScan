@@ -7,6 +7,8 @@ import { MediaServerDetector } from './ladder/MediaServerDetector.ts';
 import { LegBuilder } from './ladder/LegBuilder.ts';
 import { ConversationGrouper } from './ladder/ConversationGrouper.ts';
 import { AnomalyDetector } from './ladder/AnomalyDetector.ts';
+import { MosEngine } from './mos/MosEngine.ts';
+import { StreamAudioDecoder } from './decoders/StreamAudioDecoder.ts';
 import type { Conversation, Leg, MediaServer } from './ladder/LadderTypes.ts';
 import type { RtpStream } from './rtp/RtpDemuxer.ts';
 import type { SipDialog } from './sip/DialogManager.ts';
@@ -106,6 +108,7 @@ export class CapturePipeline {
           const rtcp = RtpDemuxer.parseRtcp(payload);
           if (rtcp) {
             rtcpPackets++;
+            rtpDemuxer.addRtcpPacket(rtcp, pkt.timestampSec);
           }
         }
       }
@@ -121,6 +124,49 @@ export class CapturePipeline {
 
     const legBuilder = new LegBuilder(msIp);
     const legs = legBuilder.buildLegs(dialogs, streams);
+
+    // Attach Estimated MOS (E-model) metrics to legs and streams
+    for (const leg of legs) {
+      if (leg.inboundStream) {
+        const stream = streams.find(s => s.ssrc === leg.inboundStream?.ssrc);
+        if (stream && stream.packets.length > 0) {
+          (stream as any).direction = 'inbound';
+          const mosRes = MosEngine.analyzeStream(stream, dialogs);
+          leg.inboundStream.mos = mosRes.mos;
+          leg.inboundStream.mosLq = mosRes.mosLq;
+          leg.inboundStream.mosCq = mosRes.mosCq;
+          leg.inboundStream.rFactor = mosRes.rFactor;
+          (stream as any).mos = mosRes.mos;
+          (stream as any).rFactor = mosRes.rFactor;
+        }
+      }
+      if (leg.outboundStream) {
+        const stream = streams.find(s => s.ssrc === leg.outboundStream?.ssrc);
+        if (stream && stream.packets.length > 0) {
+          (stream as any).direction = 'outbound';
+          const mosRes = MosEngine.analyzeStream(stream, dialogs);
+          leg.outboundStream.mos = mosRes.mos;
+          leg.outboundStream.mosLq = mosRes.mosLq;
+          leg.outboundStream.mosCq = mosRes.mosCq;
+          leg.outboundStream.rFactor = mosRes.rFactor;
+          (stream as any).mos = mosRes.mos;
+          (stream as any).rFactor = mosRes.rFactor;
+        }
+      }
+    }
+
+    // Ensure all audio streams have MOS analyzed even if not matched to a SIP leg
+    for (const stream of streams) {
+      if ((stream as any).mos === undefined && stream.packets.length > 0 && stream.payloadType !== 13) {
+        const info = StreamAudioDecoder.resolveCodec(stream, dialogs);
+        const isVideo = info.normalizedCodec === 'H264' || info.normalizedCodec === 'VP8' || stream.payloadType === 99 || stream.payloadType === 96;
+        if (!isVideo) {
+          const mosRes = MosEngine.analyzeStream(stream, dialogs);
+          (stream as any).mos = mosRes.mos;
+          (stream as any).rFactor = mosRes.rFactor;
+        }
+      }
+    }
 
     const anomalyDetector = new AnomalyDetector();
     for (const leg of legs) {

@@ -54,6 +54,8 @@ export interface RtpStream {
   clockRate: number;
   packets: StoredRtpPacket[];
   telephoneEvents: Array<{ event: number; time: number; duration: number }>;
+  rtcpRttMs?: number;
+  rtcpXrMetrics?: any;
 }
 
 export class RtpDemuxer {
@@ -163,6 +165,103 @@ export class RtpDemuxer {
       senderSsrc,
       data,
     };
+  }
+
+  /**
+   * Processes compound RTCP packet (SR, RR, XR) to track RTT and RFC 3611 VoIP Metrics.
+   */
+  public addRtcpPacket(rtcp: RtcpPacket, pktTime: number): void {
+    let offset = 0;
+    while (offset + 4 <= rtcp.data.length) {
+      const pt = rtcp.data[offset + 1];
+      const lenWords = ((rtcp.data[offset + 2] << 8) | rtcp.data[offset + 3]) + 1;
+      const blockLen = lenWords * 4;
+      if (offset + blockLen > rtcp.data.length) break;
+
+      const blockData = rtcp.data.subarray(offset, offset + blockLen);
+
+      if (pt === 200 || pt === 201) {
+        // SR or RR: check report blocks for LSR / DLSR
+        const reportsOffset = pt === 200 ? 28 : 8;
+        const reportCount = rtcp.data[offset] & 0x1f;
+        for (let r = 0; r < reportCount; r++) {
+          const ro = reportsOffset + r * 24;
+          if (ro + 24 <= blockData.length) {
+            const targetSsrc = ((blockData[ro] << 24) | (blockData[ro + 1] << 16) | (blockData[ro + 2] << 8) | blockData[ro + 3]) >>> 0;
+            const lsr = ((blockData[ro + 16] << 24) | (blockData[ro + 17] << 16) | (blockData[ro + 18] << 8) | blockData[ro + 19]) >>> 0;
+            const dlsr = ((blockData[ro + 20] << 24) | (blockData[ro + 21] << 16) | (blockData[ro + 22] << 8) | blockData[ro + 23]) >>> 0;
+
+            if (lsr > 0 && dlsr > 0) {
+              const dlsrSec = dlsr / 65536.0;
+              const rttMs = Math.round(Math.max(10, dlsrSec * 1000));
+              for (const stream of this.streams.values()) {
+                if (stream.ssrc === targetSsrc) {
+                  stream.rtcpRttMs = rttMs;
+                }
+              }
+            }
+          }
+        }
+      } else if (pt === 207) {
+        // RTCP XR (RFC 3611)
+        let xOff = 8;
+        while (xOff + 4 <= blockData.length) {
+          const bt = blockData[xOff]; // block type
+          const btLenWords = ((blockData[xOff + 2] << 8) | blockData[xOff + 3]) + 1;
+          const btLen = btLenWords * 4;
+          if (xOff + btLen > blockData.length) break;
+
+          if (bt === 7 && btLen >= 32) {
+            // Block Type 7: VoIP Metrics Report Block
+            const sourceSsrc = ((blockData[xOff + 4] << 24) | (blockData[xOff + 5] << 16) | (blockData[xOff + 6] << 8) | blockData[xOff + 7]) >>> 0;
+            const lossRate = blockData[xOff + 8] / 256.0;
+            const discardRate = blockData[xOff + 9] / 256.0;
+            const burstDensity = blockData[xOff + 10] / 256.0;
+            const gapDensity = blockData[xOff + 11] / 256.0;
+            const burstDurationMs = (blockData[xOff + 12] << 8) | blockData[xOff + 13];
+            const gapDurationMs = (blockData[xOff + 14] << 8) | blockData[xOff + 15];
+            const roundTripDelayMs = (blockData[xOff + 16] << 8) | blockData[xOff + 17];
+            const endSystemDelayMs = (blockData[xOff + 18] << 8) | blockData[xOff + 19];
+            const signalLevelDbm = blockData[xOff + 20] - 128;
+            const noiseLevelDbm = blockData[xOff + 21] - 128;
+            const rerlDb = blockData[xOff + 22];
+            const rFactor = blockData[xOff + 24];
+            const extRFactor = blockData[xOff + 25];
+            const mosLq = blockData[xOff + 26] / 10.0;
+            const mosCq = blockData[xOff + 27] / 10.0;
+
+            for (const stream of this.streams.values()) {
+              if (stream.ssrc === sourceSsrc) {
+                stream.rtcpXrMetrics = {
+                  ssrc: sourceSsrc,
+                  lossRate,
+                  discardRate,
+                  burstDensity,
+                  gapDensity,
+                  burstDurationMs,
+                  gapDurationMs,
+                  roundTripDelayMs,
+                  endSystemDelayMs,
+                  signalLevelDbm,
+                  noiseLevelDbm,
+                  rerlDb,
+                  rFactor,
+                  extRFactor,
+                  mosLq,
+                  mosCq,
+                };
+                if (roundTripDelayMs > 0) {
+                  stream.rtcpRttMs = roundTripDelayMs;
+                }
+              }
+            }
+          }
+          xOff += btLen;
+        }
+      }
+
+      offset += blockLen;
+    }
   }
 
   /**

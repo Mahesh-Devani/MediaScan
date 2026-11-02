@@ -77,6 +77,25 @@ export class AnomalyDetector {
       });
     }
 
+    // 5. Low Estimated MOS (E-model) (< 3.6 warning, < 3.1 error)
+    if (leg.inboundStream && leg.inboundStream.mos !== undefined && leg.inboundStream.mos < 3.6) {
+      anomalies.push({
+        severity: leg.inboundStream.mos < 3.1 ? 'error' : 'warning',
+        type: 'low_mos',
+        description: `Low Estimated MOS (E-model) on Inbound stream: ${leg.inboundStream.mos.toFixed(2)} (R: ${leg.inboundStream.rFactor?.toFixed(1) || '--'}).`,
+        timestamp: leg.inboundStream.startTime,
+      });
+    }
+
+    if (leg.outboundStream && leg.outboundStream.mos !== undefined && leg.outboundStream.mos < 3.6) {
+      anomalies.push({
+        severity: leg.outboundStream.mos < 3.1 ? 'error' : 'warning',
+        type: 'low_mos',
+        description: `Low Estimated MOS (E-model) on Outbound stream: ${leg.outboundStream.mos.toFixed(2)} (R: ${leg.outboundStream.rFactor?.toFixed(1) || '--'}).`,
+        timestamp: leg.outboundStream.startTime,
+      });
+    }
+
     // De-duplicate anomalies of the same type
     const seen = new Set<string>();
     return anomalies.filter(a => {

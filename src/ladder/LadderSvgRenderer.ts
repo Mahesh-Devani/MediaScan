@@ -8,6 +8,7 @@ export interface LadderSvgOptions {
   showSipEvents?: boolean;
   showAnomalies?: boolean;
   showDtmf?: boolean;
+  showMos?: boolean;
   showSsrc?: boolean;
   dialogs?: SipDialog[];
 }
@@ -99,7 +100,8 @@ export class LadderSvgRenderer {
           'inbound',
           leg.id,
           options.showSsrc ?? false,
-          options.showDtmf ?? false
+          options.showDtmf ?? false,
+          options.showMos ?? true
         );
       }
 
@@ -113,7 +115,8 @@ export class LadderSvgRenderer {
           'outbound',
           leg.id,
           options.showSsrc ?? false,
-          options.showDtmf ?? false
+          options.showDtmf ?? false,
+          options.showMos ?? true
         );
       }
 
@@ -157,7 +160,8 @@ export class LadderSvgRenderer {
     dir: 'inbound' | 'outbound',
     legId: string,
     showSsrc: boolean,
-    showDtmf: boolean = false
+    showDtmf: boolean = false,
+    showMos: boolean = true
   ): string {
     const isLeft = endX < startX;
     const color = LadderSvgRenderer.getCodecColor(s.codec);
@@ -192,6 +196,23 @@ export class LadderSvgRenderer {
     // Text Label next to Play Button
     res += `    <text x="${badgeX + 22}" y="${y}" fill="#c0caf5" font-size="9.5" text-anchor="start">${label}</text>\n`;
 
+    let extraPillOffset = 8;
+
+    // Render Estimated MOS (E-model) pill badge if available and enabled
+    if (showMos && s.mos !== undefined && s.mos > 0) {
+      const mosVal = s.mos.toFixed(1);
+      const mosColor = s.mos >= 4.0 ? '#9ece6a' : s.mos >= 3.6 ? '#2ac3de' : s.mos >= 3.1 ? '#e0af68' : '#f7768e';
+      const mosBg = s.mos >= 4.0 ? 'rgba(158, 206, 106, 0.2)' : s.mos >= 3.6 ? 'rgba(42, 195, 222, 0.2)' : s.mos >= 3.1 ? 'rgba(224, 175, 104, 0.2)' : 'rgba(247, 118, 142, 0.2)';
+      const mosPillX = badgeX + badgeWidth + extraPillOffset;
+      const mosPillW = 44;
+      res += `    <g class="ladder-mos-badge" style="cursor: help;" title="Estimated MOS (E-model): ${s.mos.toFixed(2)} (R: ${s.rFactor?.toFixed(1) || '--'})\n${s.mos >= 4.0 ? 'Good / Excellent' : s.mos >= 3.6 ? 'Fair' : s.mos >= 3.1 ? 'Poor' : 'Bad'}">\n`;
+      res += `      <rect x="${mosPillX}" y="${y - 8}" width="${mosPillW}" height="15" rx="3" fill="#1f2335" stroke="${mosColor}" stroke-width="1.2"/>\n`;
+      res += `      <rect x="${mosPillX}" y="${y - 8}" width="${mosPillW}" height="15" rx="3" fill="${mosBg}"/>\n`;
+      res += `      <text x="${mosPillX + mosPillW / 2}" y="${y + 3}" fill="${mosColor}" font-size="8.5" font-weight="bold" text-anchor="middle">MOS ${mosVal}</text>\n`;
+      res += `    </g>\n`;
+      extraPillOffset += mosPillW + 6;
+    }
+
     // Render RFC 4733 DTMF Keypad Pills along the stream arrow if enabled
     if (showDtmf && s.telephoneEvents && s.telephoneEvents.length > 0) {
       const uniqueEvents: Array<{ digit: string; time: number }> = [];
@@ -204,7 +225,7 @@ export class LadderSvgRenderer {
       }
 
       uniqueEvents.forEach((uev, eidx) => {
-        const dtmfX = badgeX + badgeWidth + 8 + eidx * 26;
+        const dtmfX = badgeX + badgeWidth + extraPillOffset + eidx * 26;
         res += `    <g class="ladder-dtmf-badge" data-digit="${uev.digit}" style="cursor: pointer;" title="DTMF digit '${uev.digit}' (Click to play tone)">\n`;
         res += `      <rect x="${dtmfX}" y="${y - 8}" width="22" height="15" rx="3" fill="#1f2335" stroke="#e0af68" stroke-width="1.2"/>\n`;
         res += `      <text x="${dtmfX + 11}" y="${y + 3}" fill="#e0af68" font-size="9.5" font-weight="bold" text-anchor="middle">⌗${uev.digit}</text>\n`;

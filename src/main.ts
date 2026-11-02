@@ -7,6 +7,7 @@ import { LadderSvgRenderer } from './ladder/LadderSvgRenderer.ts';
 import { MultiTrackPlayer } from './media/MultiTrackPlayer.ts';
 import { MultiTrackRenderer } from './media/MultiTrackRenderer.ts';
 import { SnrUiController } from './analysis/SnrUiController.ts';
+import { MosUiController } from './mos/MosUiController.ts';
 import { VideoDecoderPlayer } from './video/VideoDecoderPlayer.ts';
 import type { RtpStream } from './rtp/RtpDemuxer.ts';
 
@@ -119,8 +120,44 @@ if (btnVideoDownloadMp4) {
   });
 }
 
-// Initialize SNR UI Controller
+// Initialize Audio Quality Controllers (SNR and Estimated MOS)
 SnrUiController.init();
+MosUiController.initialize(() => renderLadder());
+
+// Sub-Tab Switching for Audio Quality Analysis: Estimated MOS (E-model) vs SNR Analysis
+const btnTabMos = document.getElementById('btn-tab-mos');
+const btnTabSnr = document.getElementById('btn-tab-snr');
+const mosPanel = document.getElementById('mos-panel');
+const snrPanel = document.getElementById('snr-panel');
+
+if (btnTabMos && btnTabSnr && mosPanel && snrPanel) {
+  btnTabMos.addEventListener('click', () => {
+    btnTabMos.classList.add('active');
+    btnTabSnr.classList.remove('active');
+    btnTabMos.style.background = 'rgba(42, 195, 222, 0.2)';
+    btnTabMos.style.borderColor = '#2ac3de';
+    btnTabMos.style.color = '#2ac3de';
+    btnTabSnr.style.background = 'transparent';
+    btnTabSnr.style.borderColor = 'var(--border)';
+    btnTabSnr.style.color = 'var(--text-dim)';
+    mosPanel.style.display = 'flex';
+    snrPanel.style.display = 'none';
+    MosUiController.render();
+  });
+
+  btnTabSnr.addEventListener('click', () => {
+    btnTabSnr.classList.add('active');
+    btnTabMos.classList.remove('active');
+    btnTabSnr.style.background = 'rgba(122, 162, 247, 0.2)';
+    btnTabSnr.style.borderColor = '#7aa2f7';
+    btnTabSnr.style.color = '#7aa2f7';
+    btnTabMos.style.background = 'transparent';
+    btnTabMos.style.borderColor = 'var(--border)';
+    btnTabMos.style.color = 'var(--text-dim)';
+    snrPanel.style.display = 'flex';
+    mosPanel.style.display = 'none';
+  });
+}
 
 // Tab switching
 document.querySelectorAll('.nav-tab').forEach(tab => {
@@ -200,6 +237,12 @@ function runAnalysis(pinnedMsIp?: string) {
   msControl.style.display = 'flex';
 
   populateMediaServerSelect(pinnedMsIp);
+  MosUiController.setData(
+    pipelineResult.streams,
+    pipelineResult.dialogs,
+    pipelineResult.legs,
+    pipelineResult.conversations
+  );
   populateConversations();
   renderSipTable();
   renderRtpTable();
@@ -412,6 +455,10 @@ function populateConversations() {
       renderMultiTrackView();
     };
   }
+  const chkShowMos = document.getElementById('chk-show-mos') as HTMLInputElement | null;
+  if (chkShowMos) {
+    chkShowMos.onchange = () => renderLadder();
+  }
 
   renderLadder();
 }
@@ -431,15 +478,18 @@ function renderLadder() {
   const chkDetectAnomalies = document.getElementById('chk-detect-anomalies') as HTMLInputElement | null;
   const chkSipEvents = document.getElementById('chk-sip-events') as HTMLInputElement | null;
   const chkShowDtmf = document.getElementById('chk-show-dtmf') as HTMLInputElement | null;
+  const chkShowMos = document.getElementById('chk-show-mos') as HTMLInputElement | null;
   const showAnomalies = chkDetectAnomalies ? chkDetectAnomalies.checked : true;
   const showSipEvents = chkSipEvents ? chkSipEvents.checked : true;
   const showDtmf = chkShowDtmf ? chkShowDtmf.checked : false;
+  const showMos = chkShowMos ? chkShowMos.checked : true;
 
   const svg = LadderSvgRenderer.render(conv, {
     mediaServerIp: msIp,
     showAnomalies,
     showSipEvents,
     showDtmf,
+    showMos,
     dialogs: pipelineResult.dialogs,
   });
   ladderContainer.innerHTML = svg;
@@ -453,6 +503,7 @@ function renderLadder() {
       if (stream) {
         playStream(stream);
         SnrUiController.selectStreamBySsrc(ssrc);
+        MosUiController.selectStreamBySsrc(ssrc);
       }
     });
   });
@@ -546,6 +597,16 @@ function renderRtpTable() {
     const duration = (s.endTime - s.startTime).toFixed(2);
     const jitterMs = (s.jitterUs / 1000).toFixed(1);
 
+    const mosVal = (s as any).mos;
+    const rFactorVal = (s as any).rFactor;
+    let mosDisplay = '--';
+    if (mosVal !== undefined) {
+      const mosColor = mosVal >= 4.0 ? '#9ece6a' : mosVal >= 3.6 ? '#2ac3de' : mosVal >= 3.1 ? '#e0af68' : '#f7768e';
+      mosDisplay = `<span style="font-weight: 700; color: ${mosColor};">${mosVal.toFixed(2)}</span> <span style="font-size: 10px; color: var(--text-dim);">(R: ${rFactorVal !== undefined ? rFactorVal.toFixed(1) : '--'})</span>`;
+    } else if (isVideo) {
+      mosDisplay = `<span style="font-size: 11px; color: var(--text-dim);">N/A (Video)</span>`;
+    }
+
     const leg = pipelineResult?.legs.find(l => l.inboundStream?.ssrc === s.ssrc || l.outboundStream?.ssrc === s.ssrc);
     const isIn = leg ? leg.inboundStream?.ssrc === s.ssrc : (pipelineResult?.mediaServer?.ip ? s.dstIp === pipelineResult.mediaServer.ip : false);
     const dirBadge = isIn
@@ -561,6 +622,7 @@ function renderRtpTable() {
       <td>${s.packetCount}</td>
       <td style="${s.lossPercent > 0 ? 'color: var(--danger); font-weight: bold;' : ''}">${s.lossPercent}%</td>
       <td>${jitterMs}</td>
+      <td>${mosDisplay}</td>
       <td>${duration}s</td>
       <td>
         ${isVideo ? `
@@ -584,6 +646,8 @@ function renderRtpTable() {
       const stream = pipelineResult?.streams.find(s => s.ssrc === ssrc);
       if (stream) {
         playStream(stream);
+        SnrUiController.selectStreamBySsrc(ssrc);
+        MosUiController.selectStreamBySsrc(ssrc);
       }
     });
   });
@@ -687,6 +751,7 @@ async function playStream(stream: RtpStream) {
   activeStream = stream;
   isLadderPlayerVisible = true;
   playerDock.style.display = 'flex';
+  MosUiController.selectStreamBySsrc(stream.ssrc);
 
   playerTitle.textContent = `SSRC: ${stream.ssrc} (${info.name})`;
   playerMeta.textContent = `${stream.srcIp}:${stream.srcPort} \u2192 ${stream.dstIp}:${stream.dstPort} | Decoding audio...`;
@@ -1221,6 +1286,11 @@ function renderMultiTrackGutter() {
       </div>
     `;
 
+    row.addEventListener('click', () => {
+      SnrUiController.selectStreamBySsrc(track.ssrc);
+      MosUiController.selectStreamBySsrc(track.ssrc);
+    });
+
     mtTracksGutter.appendChild(row);
   }
 
@@ -1257,6 +1327,7 @@ function renderMultiTrackGutter() {
       multiTrackPlayer.soloSingleStreamAndPlay(ssrc);
       btnMtTogglePlay.textContent = '\u23F8 Pause';
       SnrUiController.selectStreamBySsrc(ssrc);
+      MosUiController.selectStreamBySsrc(ssrc);
       renderMultiTrackView();
     });
   });

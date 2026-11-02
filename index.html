@@ -67,6 +67,9 @@
           <label style="font-size: 13px; color: var(--text-dim); display: flex; align-items: center; gap: 6px; cursor: pointer;" title="Show RFC 4733 / RFC 2833 DTMF dual-tone keypad badges on stream arrows">
             <input type="checkbox" id="chk-show-dtmf"> DTMF Badges
           </label>
+          <label style="font-size: 13px; color: var(--text-dim); display: flex; align-items: center; gap: 6px; cursor: pointer;" title="Show Estimated MOS (E-model) score pills on stream arrows">
+            <input type="checkbox" id="chk-show-mos" checked> Estimated MOS
+          </label>
         </div>
       </div>
 
@@ -181,8 +184,162 @@
           </div>
         </div>
 
+        <!-- Audio Quality Analysis Sub-Tabs: Estimated MOS vs SNR -->
+        <div class="quality-tabs-bar" style="display: flex; gap: 10px; margin-top: 16px; border-bottom: 2px solid rgba(255, 255, 255, 0.08); padding-bottom: 8px;">
+          <button class="btn btn-sm btn-quality-tab active" id="btn-tab-mos" style="padding: 6px 16px; font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 6px; background: rgba(42, 195, 222, 0.2); border: 1px solid #2ac3de; color: #2ac3de;">
+            <span>🎧</span> Estimated MOS (E-model)
+          </button>
+          <button class="btn btn-sm btn-quality-tab" id="btn-tab-snr" style="padding: 6px 16px; font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 6px; background: transparent; border: 1px solid var(--border); color: var(--text-dim);">
+            <span>📊</span> Signal-to-Noise Ratio (SNR) Analysis
+          </button>
+        </div>
+
+        <!-- Estimated MOS (E-model) Standalone Analysis Panel -->
+        <div class="mos-panel" id="mos-panel" style="margin-top: 14px; background-color: var(--bg-secondary); border: 1px solid var(--border); border-radius: 8px; padding: 16px 20px; display: flex; flex-direction: column; gap: 14px;">
+          <!-- Top Row: Title, Stream Selector, Codec Table Trigger, PLC toggle -->
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; border-bottom: 1px solid rgba(255, 255, 255, 0.08); padding-bottom: 12px;">
+            <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+              <span style="font-weight: 700; font-size: 15px; color: #fff; display: flex; align-items: center; gap: 6px;">
+                <span style="color: #2ac3de;">🎧</span> Estimated MOS (E-model)
+              </span>
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <label for="mos-stream-select" style="font-size: 12px; color: var(--text-dim);">Target Stream:</label>
+                <select id="mos-stream-select" style="background: var(--bg-tertiary); color: #fff; border: 1px solid var(--border); border-radius: 4px; padding: 4px 8px; font-size: 12px;"></select>
+              </div>
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 14px; flex-wrap: wrap;">
+              <label style="display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--text-dim); cursor: pointer;" title="Toggle Packet Loss Concealment (uses G.113 PLC robustness Bpl)">
+                <input type="checkbox" id="chk-mos-plc" checked>
+                <span>Packet Loss Concealment (PLC)</span>
+              </label>
+              <button class="btn btn-sm" id="btn-mos-edit-codecs" style="padding: 4px 10px; font-size: 11px; background: rgba(122, 162, 247, 0.15); border: 1px solid #7aa2f7; color: #7aa2f7;">
+                ⚙ Codec Parameters (G.113)
+              </button>
+            </div>
+          </div>
+
+          <!-- Second Row: Jitter Buffer Simulation & Assumed Delay Controls -->
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px; background: rgba(0,0,0,0.15); border: 1px solid rgba(255,255,255,0.04); border-radius: 6px; padding: 10px 14px;">
+            <!-- Jitter Buffer selector -->
+            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+              <span style="font-size: 12px; font-weight: 600; color: var(--text-dim);">Jitter Buffer Simulation:</span>
+              <div class="btn-group" style="display: flex; gap: 4px;">
+                <button class="btn btn-sm btn-mos-jb" data-jb="fixed-40" style="padding: 3px 8px; font-size: 11px;">Fixed 40ms</button>
+                <button class="btn btn-sm btn-mos-jb active" data-jb="fixed-60" style="padding: 3px 8px; font-size: 11px;">Fixed 60ms (Default)</button>
+                <button class="btn btn-sm btn-mos-jb" data-jb="fixed-100" style="padding: 3px 8px; font-size: 11px;">Fixed 100ms</button>
+                <button class="btn btn-sm btn-mos-jb" data-jb="adaptive" style="padding: 3px 8px; font-size: 11px;">Adaptive</button>
+              </div>
+            </div>
+
+            <!-- Assumed One-way delay slider -->
+            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+              <span style="font-size: 12px; font-weight: 600; color: var(--text-dim);" title="One-way network delay assumption. Adds to jitter buffer playout latency to form conversational delay Ta.">Assumed One-Way Delay:</span>
+              <input type="range" id="mos-delay-input" min="0" max="300" step="10" value="0" style="width: 100px;">
+              <span id="mos-delay-val-text" style="font-size: 12px; font-family: monospace; color: #fff; width: 45px;">0 ms</span>
+            </div>
+          </div>
+
+          <!-- Third Row: Primary Score Cards Grid -->
+          <div style="display: grid; grid-template-columns: 240px 1fr; gap: 14px; align-items: stretch;">
+            <!-- Big Score Card -->
+            <div style="background: rgba(0, 0, 0, 0.25); border: 1px solid var(--border); border-radius: 6px; padding: 14px 18px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;">
+              <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-dim); font-weight: 600;">Estimated MOS (E-model)</div>
+              <div style="font-size: 42px; font-weight: 800; font-family: monospace; color: #fff; line-height: 1;" id="mos-val-score">--</div>
+              <div class="badge-tag" id="mos-val-rating-badge" style="margin-top: 4px; font-size: 11px;">--</div>
+              <div style="font-size: 11px; color: var(--text-dim); margin-top: 4px;">R-Factor: <span id="mos-val-r" style="font-weight: 700; color: #fff;">--</span> / 93.2</div>
+            </div>
+
+            <!-- Sub Metrics Cards Grid -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px;">
+              <div style="background: rgba(0, 0, 0, 0.18); border: 1px solid rgba(255,255,255,0.06); border-radius: 6px; padding: 10px 12px;">
+                <div style="font-size: 11px; color: var(--text-dim);">MOS-LQ (Listening)</div>
+                <div style="font-size: 16px; font-weight: 700; font-family: monospace; color: #2ac3de;" id="mos-val-lq">--</div>
+                <div style="font-size: 10px; color: var(--text-dim); margin-top: 2px;">No delay impairment (Id = 0)</div>
+              </div>
+
+              <div style="background: rgba(0, 0, 0, 0.18); border: 1px solid rgba(255,255,255,0.06); border-radius: 6px; padding: 10px 12px;">
+                <div style="font-size: 11px; color: var(--text-dim);">MOS-CQ (Conversational)</div>
+                <div style="font-size: 16px; font-weight: 700; font-family: monospace; color: #7aa2f7;" id="mos-val-cq">--</div>
+                <div style="font-size: 10px; color: var(--text-dim); margin-top: 2px;">With delay impairment (Id)</div>
+              </div>
+
+              <div style="background: rgba(0, 0, 0, 0.18); border: 1px solid rgba(255,255,255,0.06); border-radius: 6px; padding: 10px 12px;">
+                <div style="font-size: 11px; color: var(--text-dim);">Effective Loss &amp; Discards</div>
+                <div style="font-size: 14px; font-weight: 700; font-family: monospace; color: #fff;" id="mos-stat-loss">--</div>
+                <div style="font-size: 10px; color: var(--text-dim); margin-top: 2px;">Ppl = Network Loss + JB Discard</div>
+              </div>
+
+              <div style="background: rgba(0, 0, 0, 0.18); border: 1px solid rgba(255,255,255,0.06); border-radius: 6px; padding: 10px 12px;">
+                <div style="font-size: 11px; color: var(--text-dim);">Gilbert Loss Burst Ratio</div>
+                <div style="font-size: 14px; font-weight: 700; font-family: monospace; color: #fff;" id="mos-stat-burst">--</div>
+                <div style="font-size: 10px; color: var(--text-dim); margin-top: 2px;">BurstR: 1.0=Random, &gt;1.0=Bursty</div>
+              </div>
+
+              <div style="background: rgba(0, 0, 0, 0.18); border: 1px solid rgba(255,255,255,0.06); border-radius: 6px; padding: 10px 12px;">
+                <div style="font-size: 11px; color: var(--text-dim);">Delay Used &amp; Source</div>
+                <div style="font-size: 14px; font-weight: 700; font-family: monospace; color: #fff;" id="mos-stat-delay">--</div>
+                <div style="font-size: 10px; color: var(--text-dim); margin-top: 2px;">One-way delay + JB playout</div>
+              </div>
+
+              <div style="background: rgba(0, 0, 0, 0.18); border: 1px solid rgba(255,255,255,0.06); border-radius: 6px; padding: 10px 12px;">
+                <div style="font-size: 11px; color: var(--text-dim);">RFC 3550 Interarrival Jitter</div>
+                <div style="font-size: 14px; font-weight: 700; font-family: monospace; color: #fff;" id="mos-stat-jitter">--</div>
+                <div style="font-size: 10px; color: var(--text-dim); margin-top: 2px;">Buffer Depth: <span id="mos-stat-jb">--</span></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Capture Vantage Point Notice & Discrepancy Banner -->
+          <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+            <span class="badge-tag" id="mos-stat-codec" style="font-size: 11px;">Codec: Unknown</span>
+            <span style="font-size: 11px; color: var(--text-dim);" id="mos-capture-notice">
+              📌 Capture Point Notice: MOS reflects network impairments accumulated up to this capture vantage point.
+            </span>
+          </div>
+
+          <div id="mos-discrepancy-banner" style="display: none; background: rgba(243, 156, 18, 0.12); border: 1px solid rgba(243, 156, 18, 0.4); border-radius: 6px; padding: 8px 12px; font-size: 12px; color: #f39c12; align-items: center; gap: 8px;">
+            <span style="font-size: 16px;">⚠️</span>
+            <span id="mos-discrepancy-text">Discrepancy notice</span>
+          </div>
+
+          <!-- Fourth Row: Sliding MOS Timeline Chart -->
+          <div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+              <span style="font-size: 12px; font-weight: 600; color: var(--text-dim);">Time-Windowed Sliding Estimated MOS (E-model) Timeline (5s Window, 1s Hop)</span>
+              <span style="font-size: 11px; color: var(--text-dim); font-family: monospace;" id="mos-timeline-stats">Min: -- | Avg: -- | Worst: --</span>
+            </div>
+            <div style="width: 100%; height: 64px; position: relative;">
+              <canvas id="mos-timeline-canvas" height="64" style="width: 100%; height: 64px; display: block; border-radius: 4px; background: rgba(0, 0, 0, 0.25);"></canvas>
+            </div>
+          </div>
+
+          <!-- Fifth Row: Conference / Multi-Leg Summary Table -->
+          <div style="border-top: 1px solid rgba(255, 255, 255, 0.08); padding-top: 12px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+              <span style="font-size: 13px; font-weight: 600; color: #fff;">Conference Call Legs &amp; Impairment Comparison</span>
+              <div style="display: flex; gap: 8px;">
+                <button class="btn" id="btn-mos-export-csv" style="padding: 3px 9px; font-size: 11px;">⬇ Export CSV</button>
+                <button class="btn" id="btn-mos-export-json" style="padding: 3px 9px; font-size: 11px;">⬇ Export JSON</button>
+              </div>
+            </div>
+            <table class="data-table" style="font-size: 11px;" id="mos-conference-table">
+              <thead>
+                <tr>
+                  <th>Leg / Participant</th>
+                  <th>Inbound (Client → MS)</th>
+                  <th>Outbound (MS → Client)</th>
+                  <th>Worst Direction</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="mos-conference-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+
         <!-- Signal-to-Noise Ratio (SNR) Standalone Analysis Panel -->
-        <div class="snr-panel" id="snr-panel" style="margin-top: 14px; background-color: var(--bg-secondary); border: 1px solid var(--border); border-radius: 8px; padding: 14px 18px; display: flex; flex-direction: column; gap: 14px;">
+        <div class="snr-panel" id="snr-panel" style="display: none; margin-top: 14px; background-color: var(--bg-secondary); border: 1px solid var(--border); border-radius: 8px; padding: 14px 18px; flex-direction: column; gap: 14px;">
           <!-- Top Row: Title, Stream Selector, Mode Toggle, Filters -->
           <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; border-bottom: 1px solid rgba(255, 255, 255, 0.08); padding-bottom: 12px;">
             <div style="display: flex; align-items: center; gap: 12px;">
@@ -382,6 +539,7 @@
               <th>Packets</th>
               <th>Loss %</th>
               <th>Jitter (ms)</th>
+              <th>Estimated MOS (E-model)</th>
               <th>Duration</th>
               <th>Action</th>
             </tr>
@@ -459,6 +617,40 @@
         <div style="display: flex; align-items: center; gap: 8px;">
           <button class="btn-ctrl-sec" id="btn-video-download-raw" title="Download raw elementary bitstream (.264 / .ivf)">&#x2B07; Raw Bitstream</button>
           <button class="btn btn-primary" id="btn-video-download-mp4" style="padding: 6px 14px; font-size: 12px;" title="Download standard MP4 container">&#x2B07; Download MP4</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Dialog: Edit Codec Parameters (G.113) -->
+  <div class="modal-overlay" id="mos-codecs-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.7); z-index: 10000; align-items: center; justify-content: center;">
+    <div style="background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 8px; width: 840px; max-width: 95vw; max-height: 85vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 12px 36px rgba(0,0,0,0.6);">
+      <div style="padding: 14px 18px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
+        <span style="font-weight: 700; font-size: 15px; color: #fff;">⚙ Codec Impairment Parameters (ITU-T G.113 Appendix I)</span>
+        <button class="btn btn-sm" id="btn-close-mos-codecs" style="padding: 3px 8px;">✕</button>
+      </div>
+      <div style="padding: 14px 18px; overflow-y: auto; flex: 1;">
+        <p style="font-size: 12px; color: var(--text-dim); margin-bottom: 12px;">
+          Configure Equipment Impairment (Ie) and Packet Loss Robustness factor (Bpl) per codec family. Values marked "Standard" derive from ITU-T G.113 Appendix I; others are documented empirical approximations.
+        </p>
+        <table class="data-table" style="font-size: 11px;">
+          <thead>
+            <tr>
+              <th>Codec</th>
+              <th>Status</th>
+              <th>Ie (Base)</th>
+              <th>Bpl (With PLC)</th>
+              <th>Bpl (No PLC)</th>
+              <th>Reference / Notes</th>
+            </tr>
+          </thead>
+          <tbody id="mos-codecs-tbody"></tbody>
+        </table>
+      </div>
+      <div style="padding: 12px 18px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.15);">
+        <button class="btn btn-sm" id="btn-reset-mos-codecs" style="color: #f7768e; border-color: rgba(247, 118, 142, 0.4);">Reset to G.113 Defaults</button>
+        <div style="display: flex; gap: 8px;">
+          <button class="btn btn-sm btn-primary" id="btn-save-mos-codecs">Save Changes</button>
         </div>
       </div>
     </div>
