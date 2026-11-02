@@ -8,6 +8,7 @@ import { MultiTrackPlayer } from './media/MultiTrackPlayer.ts';
 import { MultiTrackRenderer } from './media/MultiTrackRenderer.ts';
 import { SnrUiController } from './analysis/SnrUiController.ts';
 import { MosUiController } from './mos/MosUiController.ts';
+import { DnsmosUiController } from './dnsmos/DnsmosUiController.ts';
 import { VideoDecoderPlayer } from './video/VideoDecoderPlayer.ts';
 import type { RtpStream } from './rtp/RtpDemuxer.ts';
 
@@ -120,42 +121,74 @@ if (btnVideoDownloadMp4) {
   });
 }
 
-// Initialize Audio Quality Controllers (SNR and Estimated MOS)
+// Initialize Audio Quality Controllers (SNR, Estimated MOS, DNSMOS)
 SnrUiController.init();
 MosUiController.initialize(() => renderLadder());
+DnsmosUiController.init();
 
-// Sub-Tab Switching for Audio Quality Analysis: Estimated MOS (E-model) vs SNR Analysis
+// Sub-Tab Switching for Audio Quality Analysis: Estimated MOS (E-model) vs SNR Analysis vs DNSMOS (estimated)
 const btnTabMos = document.getElementById('btn-tab-mos');
 const btnTabSnr = document.getElementById('btn-tab-snr');
+const btnTabDnsmos = document.getElementById('btn-tab-dnsmos');
 const mosPanel = document.getElementById('mos-panel');
 const snrPanel = document.getElementById('snr-panel');
+const dnsmosPanel = document.getElementById('dnsmos-panel');
 
-if (btnTabMos && btnTabSnr && mosPanel && snrPanel) {
+if (btnTabMos && btnTabSnr && btnTabDnsmos && mosPanel && snrPanel && dnsmosPanel) {
   btnTabMos.addEventListener('click', () => {
     btnTabMos.classList.add('active');
     btnTabSnr.classList.remove('active');
+    btnTabDnsmos.classList.remove('active');
     btnTabMos.style.background = 'rgba(42, 195, 222, 0.2)';
     btnTabMos.style.borderColor = '#2ac3de';
     btnTabMos.style.color = '#2ac3de';
     btnTabSnr.style.background = 'transparent';
     btnTabSnr.style.borderColor = 'var(--border)';
     btnTabSnr.style.color = 'var(--text-dim)';
+    btnTabDnsmos.style.background = 'transparent';
+    btnTabDnsmos.style.borderColor = 'var(--border)';
+    btnTabDnsmos.style.color = 'var(--text-dim)';
     mosPanel.style.display = 'flex';
     snrPanel.style.display = 'none';
+    dnsmosPanel.style.display = 'none';
     MosUiController.render();
   });
 
   btnTabSnr.addEventListener('click', () => {
     btnTabSnr.classList.add('active');
     btnTabMos.classList.remove('active');
+    btnTabDnsmos.classList.remove('active');
     btnTabSnr.style.background = 'rgba(122, 162, 247, 0.2)';
     btnTabSnr.style.borderColor = '#7aa2f7';
     btnTabSnr.style.color = '#7aa2f7';
     btnTabMos.style.background = 'transparent';
     btnTabMos.style.borderColor = 'var(--border)';
     btnTabMos.style.color = 'var(--text-dim)';
+    btnTabDnsmos.style.background = 'transparent';
+    btnTabDnsmos.style.borderColor = 'var(--border)';
+    btnTabDnsmos.style.color = 'var(--text-dim)';
     snrPanel.style.display = 'flex';
     mosPanel.style.display = 'none';
+    dnsmosPanel.style.display = 'none';
+  });
+
+  btnTabDnsmos.addEventListener('click', () => {
+    btnTabDnsmos.classList.add('active');
+    btnTabMos.classList.remove('active');
+    btnTabSnr.classList.remove('active');
+    btnTabDnsmos.style.background = 'rgba(187, 154, 247, 0.2)';
+    btnTabDnsmos.style.borderColor = '#bb9af7';
+    btnTabDnsmos.style.color = '#bb9af7';
+    btnTabMos.style.background = 'transparent';
+    btnTabMos.style.borderColor = 'var(--border)';
+    btnTabMos.style.color = 'var(--text-dim)';
+    btnTabSnr.style.background = 'transparent';
+    btnTabSnr.style.borderColor = 'var(--border)';
+    btnTabSnr.style.color = 'var(--text-dim)';
+    dnsmosPanel.style.display = 'flex';
+    mosPanel.style.display = 'none';
+    snrPanel.style.display = 'none';
+    DnsmosUiController.render();
   });
 }
 
@@ -385,7 +418,10 @@ function populateConversations() {
       mtConversationSelect.value = val;
       multiTrackPlayer.setConversationFilter(val);
       renderMultiTrackView();
-      if (pipelineResult) SnrUiController.setTracks(multiTrackPlayer.getTracks(), pipelineResult);
+      if (pipelineResult) {
+        SnrUiController.setTracks(multiTrackPlayer.getTracks(), pipelineResult);
+        DnsmosUiController.setData(multiTrackPlayer.getTracks(), pipelineResult);
+      }
     }
     if (metricsConvSelect && metricsConvSelect.value !== val) {
       metricsConvSelect.value = val;
@@ -409,7 +445,10 @@ function populateConversations() {
         }
       }
       renderMultiTrackView();
-      if (pipelineResult) SnrUiController.setTracks(multiTrackPlayer.getTracks(), pipelineResult);
+      if (pipelineResult) {
+        SnrUiController.setTracks(multiTrackPlayer.getTracks(), pipelineResult);
+        DnsmosUiController.setData(multiTrackPlayer.getTracks(), pipelineResult);
+      }
     };
   }
 
@@ -425,7 +464,10 @@ function populateConversations() {
           mtConversationSelect.value = val;
           multiTrackPlayer.setConversationFilter(val);
           renderMultiTrackView();
-          if (pipelineResult) SnrUiController.setTracks(multiTrackPlayer.getTracks(), pipelineResult);
+          if (pipelineResult) {
+            SnrUiController.setTracks(multiTrackPlayer.getTracks(), pipelineResult);
+            DnsmosUiController.setData(multiTrackPlayer.getTracks(), pipelineResult);
+          }
         }
       }
       renderRtpTable();
@@ -504,6 +546,7 @@ function renderLadder() {
         playStream(stream);
         SnrUiController.selectStreamBySsrc(ssrc);
         MosUiController.selectStreamBySsrc(ssrc);
+        DnsmosUiController.selectStreamBySsrc(ssrc);
       }
     });
   });
@@ -648,6 +691,7 @@ function renderRtpTable() {
         playStream(stream);
         SnrUiController.selectStreamBySsrc(ssrc);
         MosUiController.selectStreamBySsrc(ssrc);
+        DnsmosUiController.selectStreamBySsrc(ssrc);
       }
     });
   });
@@ -1175,6 +1219,7 @@ async function loadMultiTrackSession() {
 
   if (pipelineResult) {
     SnrUiController.setTracks(multiTrackPlayer.getTracks(), pipelineResult);
+    DnsmosUiController.setData(multiTrackPlayer.getTracks(), pipelineResult);
   }
   renderMultiTrackView();
 }
@@ -1289,6 +1334,7 @@ function renderMultiTrackGutter() {
     row.addEventListener('click', () => {
       SnrUiController.selectStreamBySsrc(track.ssrc);
       MosUiController.selectStreamBySsrc(track.ssrc);
+      DnsmosUiController.selectStreamBySsrc(track.ssrc);
     });
 
     mtTracksGutter.appendChild(row);
@@ -1328,6 +1374,7 @@ function renderMultiTrackGutter() {
       btnMtTogglePlay.textContent = '\u23F8 Pause';
       SnrUiController.selectStreamBySsrc(ssrc);
       MosUiController.selectStreamBySsrc(ssrc);
+      DnsmosUiController.selectStreamBySsrc(ssrc);
       renderMultiTrackView();
     });
   });
@@ -1570,6 +1617,7 @@ window.addEventListener('mouseup', (e) => {
     const sel = multiTrackPlayer.getSelection();
     if (sel && sel.endSec > sel.startSec) {
       SnrUiController.syncFromCanvasSelection(sel.startSec, sel.endSec);
+      DnsmosUiController.syncFromCanvasSelection(sel.startSec, sel.endSec);
     }
   }
 });

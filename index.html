@@ -192,6 +192,9 @@
           <button class="btn btn-sm btn-quality-tab" id="btn-tab-snr" style="padding: 6px 16px; font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 6px; background: transparent; border: 1px solid var(--border); color: var(--text-dim);">
             <span>📊</span> Signal-to-Noise Ratio (SNR) Analysis
           </button>
+          <button class="btn btn-sm btn-quality-tab" id="btn-tab-dnsmos" style="padding: 6px 16px; font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 6px; background: transparent; border: 1px solid var(--border); color: var(--text-dim);">
+            <span>🧠</span> DNSMOS (estimated)
+          </button>
         </div>
 
         <!-- Estimated MOS (E-model) Standalone Analysis Panel -->
@@ -502,6 +505,198 @@
           </div>
         </div>
 
+        <!-- DNSMOS (estimated) Standalone Speech Quality Panel -->
+        <div class="dnsmos-panel" id="dnsmos-panel" style="display: none; margin-top: 14px; background-color: var(--bg-secondary); border: 1px solid var(--border); border-radius: 8px; padding: 16px 20px; flex-direction: column; gap: 14px;">
+          <!-- Top Row: Title, Stream Selector, Range Presets, Model Options, Actions -->
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; border-bottom: 1px solid rgba(255, 255, 255, 0.08); padding-bottom: 12px;">
+            <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+              <span style="font-weight: 700; font-size: 15px; color: #fff; display: flex; align-items: center; gap: 6px;">
+                <span style="color: #bb9af7;">🧠</span> DNSMOS (estimated)
+              </span>
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <label for="dnsmos-stream-select" style="font-size: 12px; color: var(--text-dim);">Target Stream:</label>
+                <select id="dnsmos-stream-select" style="background: var(--bg-tertiary); color: #fff; border: 1px solid var(--border); border-radius: 4px; padding: 4px 8px; font-size: 12px;"></select>
+              </div>
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+              <div class="btn-group" style="display: flex; gap: 4px;">
+                <button class="btn btn-sm" id="btn-dnsmos-whole-stream" style="padding: 4px 10px; font-size: 11px;">Whole Stream</button>
+                <button class="btn btn-sm" id="btn-dnsmos-from-canvas-sel" style="padding: 4px 10px; font-size: 11px;">From Canvas Sel</button>
+              </div>
+
+              <div style="display: flex; align-items: center; gap: 6px; font-size: 12px;">
+                <label style="color: var(--text-dim);">Range:</label>
+                <input type="text" id="dnsmos-input-start" value="0:00.000" style="width: 70px; background: var(--bg-tertiary); color: #fff; border: 1px solid var(--border); border-radius: 4px; padding: 3px 6px; font-size: 11px; font-family: monospace; text-align: center;">
+                <span style="color: var(--text-dim);">&ndash;</span>
+                <input type="text" id="dnsmos-input-end" value="0:00.000" style="width: 70px; background: var(--bg-tertiary); color: #fff; border: 1px solid var(--border); border-radius: 4px; padding: 3px 6px; font-size: 11px; font-family: monospace; text-align: center;">
+              </div>
+
+              <label style="display: flex; align-items: center; gap: 4px; font-size: 12px; color: var(--text-dim); cursor: pointer;" title="Toggle Personalized DNSMOS P.835 model">
+                <input type="checkbox" id="chk-dnsmos-personalized">
+                <span>Personalized</span>
+              </label>
+
+              <label style="display: flex; align-items: center; gap: 4px; font-size: 12px; color: var(--text-dim); cursor: pointer;" title="Compute optional ITU-T P.808 overall listening MOS model">
+                <input type="checkbox" id="chk-dnsmos-p808">
+                <span>P.808 MOS</span>
+              </label>
+
+              <button class="btn btn-sm btn-primary" id="btn-dnsmos-run" style="padding: 4px 12px; font-size: 12px; font-weight: 700;">
+                🧠 Analyze Speech Quality
+              </button>
+
+              <button class="btn btn-sm" id="btn-dnsmos-about" style="padding: 4px 10px; font-size: 11px; background: rgba(187, 154, 247, 0.15); border: 1px solid #bb9af7; color: #bb9af7;">
+                ℹ️ About DNSMOS
+              </button>
+
+              <button class="btn btn-sm" id="btn-dnsmos-batch-run" style="padding: 4px 10px; font-size: 11px; background: rgba(122, 162, 247, 0.15); border: 1px solid #7aa2f7; color: #7aa2f7;">
+                ⚡ Score All Streams
+              </button>
+            </div>
+          </div>
+
+          <!-- Second Row: Exact Range & Metadata info -->
+          <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: var(--text-dim);">
+            <span id="dnsmos-exact-range-text">Exact: 0.000s – 0.000s</span>
+            <span id="dnsmos-meta-info">Ready to evaluate</span>
+          </div>
+
+          <!-- Third Row: Primary Metric Cards (SIG, BAK, OVRL, P.808) -->
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px;">
+            <!-- SIG Card -->
+            <div style="background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: 6px; padding: 12px 14px; display: flex; flex-direction: column; gap: 4px;">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span style="font-size: 11px; font-weight: 600; color: var(--text-dim); text-transform: uppercase;">Speech Signal</span>
+                <span class="badge-tag" id="dnsmos-badge-sig" style="font-size: 10px;">--</span>
+              </div>
+              <div style="display: flex; align-items: baseline; gap: 6px;">
+                <span id="dnsmos-val-sig" style="font-size: 26px; font-weight: 800; color: #2ac3de; font-family: monospace;">--</span>
+                <span style="font-size: 11px; color: var(--text-dim);">/ 5.0 (SIG)</span>
+              </div>
+              <span style="font-size: 10px; color: var(--text-dim);">P.835 speech naturalness &amp; distortion</span>
+            </div>
+
+            <!-- BAK Card -->
+            <div style="background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: 6px; padding: 12px 14px; display: flex; flex-direction: column; gap: 4px;">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span style="font-size: 11px; font-weight: 600; color: var(--text-dim); text-transform: uppercase;">Background Noise</span>
+                <span class="badge-tag" id="dnsmos-badge-bak" style="font-size: 10px;">--</span>
+              </div>
+              <div style="display: flex; align-items: baseline; gap: 6px;">
+                <span id="dnsmos-val-bak" style="font-size: 26px; font-weight: 800; color: #bb9af7; font-family: monospace;">--</span>
+                <span style="font-size: 11px; color: var(--text-dim);">/ 5.0 (BAK)</span>
+              </div>
+              <span style="font-size: 10px; color: var(--text-dim);">P.835 background noise intrusiveness</span>
+            </div>
+
+            <!-- OVRL Card -->
+            <div style="background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: 6px; padding: 12px 14px; display: flex; flex-direction: column; gap: 4px;">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span style="font-size: 11px; font-weight: 600; color: var(--text-dim); text-transform: uppercase;">Overall Quality</span>
+                <span class="badge-tag" id="dnsmos-badge-ovrl" style="font-size: 10px;">--</span>
+              </div>
+              <div style="display: flex; align-items: baseline; gap: 6px;">
+                <span id="dnsmos-val-ovrl" style="font-size: 26px; font-weight: 800; color: #9ece6a; font-family: monospace;">--</span>
+                <span style="font-size: 11px; color: var(--text-dim);">/ 5.0 (OVRL)</span>
+              </div>
+              <span style="font-size: 10px; color: var(--text-dim);">P.835 composite human rating</span>
+            </div>
+
+            <!-- Optional P.808 Card -->
+            <div id="dnsmos-col-p808" style="display: none; background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: 6px; padding: 12px 14px; flex-direction: column; gap: 4px;">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span style="font-size: 11px; font-weight: 600; color: var(--text-dim); text-transform: uppercase;">P.808 Listening MOS</span>
+                <span class="badge-tag" id="dnsmos-badge-p808" style="font-size: 10px;">--</span>
+              </div>
+              <div style="display: flex; align-items: baseline; gap: 6px;">
+                <span id="dnsmos-val-p808" style="font-size: 26px; font-weight: 800; color: #ff9e64; font-family: monospace;">--</span>
+                <span style="font-size: 11px; color: var(--text-dim);">/ 5.0 (MOS)</span>
+              </div>
+              <span style="font-size: 10px; color: var(--text-dim);">ITU-T P.808 overall listening rating</span>
+            </div>
+          </div>
+
+          <!-- Fourth Row: Domain Caveats & Disclaimers -->
+          <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 8px 12px; background: rgba(0, 0, 0, 0.2); border-radius: 4px;">
+            <span class="badge-tag" id="dnsmos-badge-narrowband" style="display: none; background: rgba(224, 175, 104, 0.15); color: #e0af68; font-size: 11px;" title="Model trained on 16kHz wideband speech. 8kHz telephony audio lacks frequency content above 4kHz, which may lower scores.">
+              ⚠️ Narrowband (8 kHz upsampled to 16 kHz)
+            </span>
+            <span class="badge-tag" id="dnsmos-badge-confidence" style="display: none; background: rgba(247, 118, 142, 0.15); color: #f7768e; font-size: 11px;">
+              ⚠️ Low Confidence
+            </span>
+            <span class="badge-tag" id="dnsmos-badge-conf-mix" style="display: none; background: rgba(122, 162, 247, 0.15); color: #7aa2f7; font-size: 11px;">
+              ℹ️ Conference Composite: Scores reflect mixed talkers
+            </span>
+            <span style="font-size: 11px; color: var(--text-dim); margin-left: auto;">
+              Microsoft DNSMOS P.835 non-intrusive perceptual estimator. Standalone &amp; independent of network E-model MOS.
+            </span>
+          </div>
+
+          <!-- Fifth Row: Interactive Timeline Chart -->
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <div style="display: flex; align-items: center; gap: 14px; font-size: 12px;">
+                <span style="font-weight: 600; color: #fff;">Speech Quality Timeline (1s Hops, 9.01s Windows)</span>
+                <span style="display: flex; align-items: center; gap: 4px; color: #2ac3de;"><span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #2ac3de;"></span> SIG</span>
+                <span style="display: flex; align-items: center; gap: 4px; color: #bb9af7;"><span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #bb9af7;"></span> BAK</span>
+                <span style="display: flex; align-items: center; gap: 4px; color: #9ece6a;"><span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #9ece6a;"></span> OVRL</span>
+              </div>
+              <div style="display: flex; gap: 6px;">
+                <button class="btn btn-sm" id="btn-dnsmos-export-csv" style="padding: 2px 8px; font-size: 11px;">⬇ CSV</button>
+                <button class="btn btn-sm" id="btn-dnsmos-export-json" style="padding: 2px 8px; font-size: 11px;">⬇ JSON</button>
+              </div>
+            </div>
+
+            <div style="position: relative; width: 100%; height: 160px; background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: 6px; overflow: hidden;">
+              <canvas id="dnsmos-timeline-canvas" style="width: 100%; height: 100%; display: block;"></canvas>
+              <div id="dnsmos-canvas-tooltip" style="display: none; position: fixed; background: rgba(20, 22, 34, 0.95); border: 1px solid var(--border); border-radius: 4px; padding: 6px 10px; font-size: 11px; color: #fff; pointer-events: none; z-index: 1000; box-shadow: 0 4px 12px rgba(0,0,0,0.5);"></div>
+            </div>
+          </div>
+
+          <!-- Sixth Row: Input vs Output Leg Comparison (Noise Reduction) -->
+          <div style="border-top: 1px solid rgba(255, 255, 255, 0.08); padding-top: 14px; display: flex; flex-direction: column; gap: 10px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+              <div>
+                <span style="font-weight: 700; font-size: 13px; color: #fff; display: flex; align-items: center; gap: 6px;">
+                  <span>🔬</span> Leg Comparison &amp; Noise Reduction (NR) Diagnostics
+                </span>
+                <span style="font-size: 11px; color: var(--text-dim);">Compare Inbound (Client &rarr; MS) vs Outbound (MS &rarr; Client) leg to evaluate NR efficacy and artifacts.</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                <div style="display: flex; align-items: center; gap: 4px; font-size: 11px;">
+                  <label style="color: var(--text-dim);">Inbound:</label>
+                  <select id="dnsmos-compare-in-select" style="background: var(--bg-tertiary); color: #fff; border: 1px solid var(--border); border-radius: 4px; padding: 2px 6px; font-size: 11px;"></select>
+                </div>
+                <div style="display: flex; align-items: center; gap: 4px; font-size: 11px;">
+                  <label style="color: var(--text-dim);">Outbound:</label>
+                  <select id="dnsmos-compare-out-select" style="background: var(--bg-tertiary); color: #fff; border: 1px solid var(--border); border-radius: 4px; padding: 2px 6px; font-size: 11px;"></select>
+                </div>
+                <button class="btn btn-sm btn-primary" id="btn-dnsmos-compare" style="padding: 3px 10px; font-size: 11px;">
+                  Compare Legs
+                </button>
+              </div>
+            </div>
+
+            <!-- Comparison Result Container -->
+            <div id="dnsmos-comparison-result-box" style="display: none; background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: 6px; padding: 12px 14px;">
+              <table class="data-table" style="font-size: 11px; margin-bottom: 10px;">
+                <thead>
+                  <tr>
+                    <th>Quality Metric</th>
+                    <th>Inbound Leg (Pre-MS)</th>
+                    <th>Outbound Leg (Post-MS)</th>
+                    <th>Delta (&Delta;)</th>
+                  </tr>
+                </thead>
+                <tbody id="dnsmos-compare-tbody"></tbody>
+              </table>
+
+              <div id="dnsmos-verdict-alert" style="background: rgba(0, 0, 0, 0.25); border-radius: 4px; padding: 10px 12px;"></div>
+            </div>
+          </div>
+        </div>
+
         </div>
       </div>
     </div>
@@ -652,6 +847,82 @@
         <div style="display: flex; gap: 8px;">
           <button class="btn btn-sm btn-primary" id="btn-save-mos-codecs">Save Changes</button>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Dialog: About Microsoft DNSMOS -->
+  <div class="modal-overlay" id="dnsmos-about-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.7); z-index: 10000; align-items: center; justify-content: center;">
+    <div style="background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 8px; width: 700px; max-width: 95vw; max-height: 85vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 12px 36px rgba(0,0,0,0.6);">
+      <div style="padding: 14px 18px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
+        <span style="font-weight: 700; font-size: 15px; color: #fff;">ℹ️ About Microsoft DNSMOS Speech Quality</span>
+        <button class="btn btn-sm" id="btn-close-dnsmos-about" style="padding: 3px 8px;">✕</button>
+      </div>
+      <div style="padding: 16px 20px; overflow-y: auto; flex: 1; font-size: 13px; line-height: 1.6; color: var(--text-normal); display: flex; flex-direction: column; gap: 12px;">
+        <p>
+          <strong>DNSMOS (estimated)</strong> is a deep learning-based, non-intrusive (reference-free) speech quality evaluation metric developed by <strong>Microsoft Research</strong> for the Deep Noise Suppression (DNS) Challenge. It evaluates audio as human raters do across three ITU-T P.835 perceptual dimensions:
+        </p>
+        <ul style="margin: 0; padding-left: 20px;">
+          <li><strong>SIG (Speech Signal Quality):</strong> Measures naturalness, presence of distortions, robotic artifacts, and speech clipping (1.0 = very unnatural/distorted, 5.0 = highly natural).</li>
+          <li><strong>BAK (Background Noise Intrusiveness):</strong> Measures noticeability and intrusiveness of background noise (1.0 = very intrusive noise, 5.0 = completely quiet/imperceptible noise).</li>
+          <li><strong>OVRL (Overall Quality):</strong> Composite human listening Mean Opinion Score (1.0 = poor, 5.0 = excellent).</li>
+        </ul>
+        <div style="background: rgba(224, 175, 104, 0.1); border-left: 3px solid #e0af68; padding: 10px 12px; border-radius: 4px;">
+          <strong>Telephony &amp; Bandwidth Considerations:</strong>
+          DNSMOS models are trained on 16&nbsp;kHz wideband audio. Narrowband telephony audio (e.g. G.711 &micro;-law/A-law, AMR-NB, G.729 at 8&nbsp;kHz) is bandlimited to 4&nbsp;kHz. When upsampled to 16&nbsp;kHz for evaluation, the absence of high-frequency harmonics can result in lower overall scores than wideband speech.
+        </div>
+        <div>
+          <strong>Independence from E-model MOS:</strong>
+          DNSMOS is a standalone speech quality model that evaluates acoustic degradation, speech distortion, and background noise. It does <em>not</em> represent network loss or delay (which are modeled separately by the ITU-T G.107 E-model).
+        </div>
+        <div style="border-top: 1px solid rgba(255, 255, 255, 0.08); padding-top: 10px; font-size: 11px; color: var(--text-dim);">
+          <strong>Attribution &amp; License:</strong><br>
+          DNSMOS models &amp; equations are released by Microsoft Corporation under the Creative Commons Attribution 4.0 International (CC-BY-4.0) license.<br>
+          <em>Reference:</em> C. K. A. Reddy et al., &ldquo;DNSMOS P.835: A Non-Intrusive Perceptual Objective Speech Quality Metric to Evaluate Noise Suppressors,&rdquo; in Proc. IEEE ICASSP / INTERSPEECH, 2021&ndash;2022.
+        </div>
+      </div>
+      <div style="padding: 10px 18px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; background: rgba(0,0,0,0.15);">
+        <button class="btn btn-sm btn-primary" onclick="document.getElementById('dnsmos-about-modal').style.display='none'">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Dialog: Batch DNSMOS Queue Progress -->
+  <div class="modal-overlay" id="dnsmos-batch-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.7); z-index: 10000; align-items: center; justify-content: center;">
+    <div style="background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 8px; width: 780px; max-width: 95vw; max-height: 85vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 12px 36px rgba(0,0,0,0.6);">
+      <div style="padding: 14px 18px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
+        <span style="font-weight: 700; font-size: 15px; color: #fff;">⚡ Batch DNSMOS Speech Quality Scoring</span>
+        <button class="btn btn-sm" onclick="document.getElementById('dnsmos-batch-modal').style.display='none'" style="padding: 3px 8px;">✕</button>
+      </div>
+      <div style="padding: 14px 18px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 12px;">
+        <div>
+          <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 6px;">
+            <span id="dnsmos-batch-progress-text">Preparing queue...</span>
+          </div>
+          <div style="width: 100%; height: 8px; background: var(--bg-tertiary); border-radius: 4px; overflow: hidden;">
+            <div id="dnsmos-batch-progress" style="width: 0%; height: 100%; background: #2ac3de; transition: width 0.2s ease;"></div>
+          </div>
+        </div>
+
+        <table class="data-table" style="font-size: 11px;">
+          <thead>
+            <tr>
+              <th>Leg</th>
+              <th>SSRC</th>
+              <th>Codec</th>
+              <th>SIG</th>
+              <th>BAK</th>
+              <th>OVRL</th>
+              <th>P.808</th>
+              <th>Confidence</th>
+            </tr>
+          </thead>
+          <tbody id="dnsmos-batch-tbody"></tbody>
+        </table>
+      </div>
+      <div style="padding: 10px 18px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.15);">
+        <button class="btn btn-sm" id="btn-dnsmos-batch-cancel" style="color: #f7768e; border-color: rgba(247, 118, 142, 0.4);">Cancel</button>
+        <button class="btn btn-sm btn-primary" onclick="document.getElementById('dnsmos-batch-modal').style.display='none'">Done</button>
       </div>
     </div>
   </div>

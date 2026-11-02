@@ -15,6 +15,9 @@ Thumbs.db
 /summary.csv
 /PLAN.md
 /scratch/
+/mel_filters_reference.json
+__pycache__/
+*.pyc
 
 # IDE and Editor files
 .vscode/
