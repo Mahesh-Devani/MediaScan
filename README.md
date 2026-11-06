@@ -66,16 +66,23 @@ MediaScan is a high-performance, browser-native web application for analyzing, v
 - **Noise Reduction Assessment**: Input vs. Output leg comparison tool identifying over-suppression ("BAK up, SIG down") or ineffective noise reduction.
 - **100% Client-Side ONNX Runtime**: Uses `onnxruntime-web` in a dedicated Web Worker with vendored offline models.
 
+### 9. Standalone DNSMOS Tool (No PCAP Required)
+- **Direct Audio File Scoring**: Score audio files directly via drag-and-drop without needing a network packet capture.
+- **Broad Format Support**: Parses standard & extensible WAV (PCM 8/16/24/32-bit int, 32/64-bit IEEE float, A-law, $\mu$-law, IMA/MS ADPCM), raw G.711, G.722, G.726, G.729, AMR-NB/WB, Opus, MP3, AAC, FLAC.
+- **Multi-Channel & Bandwidth Telemetry**: Evaluates each channel independently (Mono, Stereo, 5.1, 7.1) with RMS and Peak dBFS reporting, silent channel detection, and spectral roll-off bandwidth estimation.
+- **Side-by-Side Comparison**: Multi-row comparison mode with $\Delta$ score metrics, rate/codec mismatch warnings, and overlaid timeline waveforms.
+
 ---
 
 ## Attributions & Third-Party Licenses
 
 - **Microsoft DNSMOS (Deep Noise Suppression Challenge)**:
-  - Models (`sig_bak_ovr.onnx`, `model_v8.onnx`) and reference evaluation scripts licensed under [Creative Commons Attribution 4.0 International (CC-BY-4.0)](https://creativecommons.org/licenses/by/4.0/).
+  - Official Repository: [https://github.com/microsoft/DNS-Challenge](https://github.com/microsoft/DNS-Challenge)
+  - Models (`sig_bak_ovr.onnx`, `sig_bak_ovr_p.onnx`, `model_v8.onnx`) and polynomial fitting equations licensed under [Creative Commons Attribution 4.0 International (CC-BY-4.0)](https://creativecommons.org/licenses/by/4.0/).
   - © Microsoft Corporation.
   - References:
     - C. K. A. Reddy, V. Gopal, R. Cutler, *"DNSMOS: A Non-Intrusive Perceptual Objective Speech Quality Metric to Evaluate Noise Suppressors"*, ICASSP 2021.
-    - C. K. A. Reddy, V. Gopal, R. Cutler, *"DNSMOS P.835: A Non-Intrusive Perceptual Objective Speech Quality Metric to Evaluate Noise Suppressors"*, ICASSP 2022.
+    - C. K. A. Reddy, V. Gopal, R. Cutler, et al., *"DNSMOS P.835: A Non-Intrusive Perceptual Objective Speech Quality Metric to Evaluate Noise Suppressors"*, ICASSP 2022.
 - **ONNX Runtime Web**: Licensed under the MIT License by Microsoft Corporation.
 - **EVS Codec WASM**: Standard 3GPP TS 26.445 decoder compiled to WebAssembly.
 

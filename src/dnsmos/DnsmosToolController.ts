@@ -80,6 +80,14 @@ export class DnsmosToolController {
       });
     }
 
+    const btnToolAbout = document.getElementById('btn-tool-about');
+    if (btnToolAbout) {
+      btnToolAbout.addEventListener('click', () => {
+        const modal = document.getElementById('dnsmos-about-modal');
+        if (modal) modal.style.display = 'flex';
+      });
+    }
+
     // Modal Raw Stream Config Close & Submit
     const btnCloseModal = document.getElementById('btn-close-raw-modal');
     const btnApplyRaw = document.getElementById('btn-apply-raw-config');

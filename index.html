@@ -30,26 +30,30 @@
     </div>
   </header>
 
+  <!-- Global Navigation Tabs (Always Visible) -->
+  <nav class="nav-tabs" id="global-nav-tabs">
+    <div class="nav-tab active" data-tab="tab-ladder">Media Flow Ladder</div>
+    <div class="nav-tab" data-tab="tab-sip">SIP Dialogs & Signaling</div>
+    <div class="nav-tab" data-tab="tab-rtp">RTP Audio Streams</div>
+    <div class="nav-tab" data-tab="tab-metrics">RTP Stream Metrics &amp; Telemetry</div>
+    <div class="nav-tab" data-tab="tab-dnsmos-tool">🧠 DNSMOS Tool</div>
+  </nav>
+
   <!-- Drag and drop zone -->
   <div class="dropzone-container" id="dropzone-area">
     <div class="dropzone" id="dropzone">
       <div class="dropzone-icon">&#x1F4C1;</div>
       <div class="dropzone-title">Drop your PCAP or PCAPNG file here</div>
       <div class="dropzone-desc">Supports SIP + RTP, Ethernet, Linux Cooked (SLL), IPv4/IPv6, UDP, TCP. Heavy parsing runs in background Web Workers. Capture files never leave your computer.</div>
-      <button class="btn btn-primary" id="btn-select-file">Select PCAP File</button>
+      <div style="display: flex; gap: 12px; justify-content: center; align-items: center; margin-top: 14px; flex-wrap: wrap;">
+        <button class="btn btn-primary" id="btn-select-file">Select PCAP File</button>
+        <button class="btn btn-ctrl-sec" id="btn-quick-switch-dnsmos" style="padding: 7px 16px; border-color: #bb9af7; color: #bb9af7; font-weight: 600;" title="Evaluate speech quality on WAV, PCM, AMR, or Opus audio files directly without loading a PCAP">🧠 Or Open DNSMOS Audio Tool</button>
+      </div>
     </div>
   </div>
 
   <!-- Main Analysis Dashboard -->
   <div id="dashboard">
-    <nav class="nav-tabs">
-      <div class="nav-tab active" data-tab="tab-ladder">Media Flow Ladder</div>
-      <div class="nav-tab" data-tab="tab-sip">SIP Dialogs & Signaling</div>
-      <div class="nav-tab" data-tab="tab-rtp">RTP Audio Streams</div>
-      <div class="nav-tab" data-tab="tab-metrics">RTP Stream Metrics &amp; Telemetry</div>
-      <div class="nav-tab" data-tab="tab-dnsmos-tool">🧠 DNSMOS Tool</div>
-    </nav>
-
     <!-- Tab 1: Media Flow Ladder -->
     <div class="tab-content" id="tab-ladder">
       <div class="conversation-controls">
@@ -765,6 +769,7 @@
             </p>
           </div>
           <div style="display: flex; align-items: center; gap: 10px;">
+            <button class="btn btn-sm" id="btn-tool-about" style="padding: 4px 10px; font-size: 11px; background: rgba(187, 154, 247, 0.15); border: 1px solid #bb9af7; color: #bb9af7;">ℹ️ About &amp; Citation</button>
             <button class="btn btn-sm" id="btn-tool-export-csv" style="padding: 4px 10px; font-size: 11px;">⬇ Export CSV</button>
             <button class="btn btn-sm" id="btn-tool-export-json" style="padding: 4px 10px; font-size: 11px;">⬇ Export JSON</button>
           </div>
@@ -789,14 +794,20 @@
         <!-- Options Toolbar & Batch Controls -->
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; background: var(--bg-tertiary); padding: 10px 14px; border-radius: 6px; border: 1px solid var(--border);">
           <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
-            <label style="display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--text-dim); cursor: pointer;" title="Toggle Personalized DNSMOS P.835 model">
-              <input type="checkbox" id="chk-tool-personalized"> Personalized Model
+            <label style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-dim); cursor: pointer;" title="Personalized DNSMOS (ICASSP 2022): Uses a cubic polynomial fit calibrated to human raters that specifically penalize distortion of the target speaker's voice. Ideal for voice preservation and personalized noise suppression. When unchecked, uses the standard ITU-T P.835 general rating.">
+              <input type="checkbox" id="chk-tool-personalized">
+              <span>Personalized Model</span>
+              <span style="font-size: 11px; color: #7aa2f7; border: 1px solid rgba(122, 162, 247, 0.4); border-radius: 50%; width: 14px; height: 14px; display: inline-flex; align-items: center; justify-content: center;" title="Personalized DNSMOS (ICASSP 2022): Uses a cubic polynomial fit calibrated to human raters that specifically penalize distortion of the target speaker's voice. Ideal for voice preservation and personalized noise suppression. When unchecked, uses the standard ITU-T P.835 general rating.">&#x2139;</span>
             </label>
-            <label style="display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--text-dim); cursor: pointer;" title="Compute P.808 Listening MOS">
-              <input type="checkbox" id="chk-tool-p808"> Include P.808 MOS
+            <label style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-dim); cursor: pointer;" title="ITU-T P.808 Overall Listening MOS: Computes a single overall listening quality score (1.0 to 5.0) using an auxiliary deep neural network with an integrated 120-band Mel-spectrogram front-end. Runs an additional inference pass.">
+              <input type="checkbox" id="chk-tool-p808">
+              <span>Include P.808 MOS</span>
+              <span style="font-size: 11px; color: #ff9e64; border: 1px solid rgba(255, 158, 100, 0.4); border-radius: 50%; width: 14px; height: 14px; display: inline-flex; align-items: center; justify-content: center;" title="ITU-T P.808 Overall Listening MOS: Computes a single overall listening quality score (1.0 to 5.0) using an auxiliary deep neural network with an integrated 120-band Mel-spectrogram front-end. Runs an additional inference pass.">&#x2139;</span>
             </label>
-            <label style="display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--text-dim); cursor: pointer;" title="Add an extra Mono Downmix row for multi-channel files">
-              <input type="checkbox" id="chk-tool-downmix"> Include Mono Downmix Row
+            <label style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-dim); cursor: pointer;" title="Mono Downmix: MediaScan strictly evaluates discrete channels (L, R, etc.) independently to prevent artificial averaging or phase cancellation. Check this to also synthesize and score an extra averaged mono mix [L+R]/2 row for comparison.">
+              <input type="checkbox" id="chk-tool-downmix">
+              <span>Include Mono Downmix Row</span>
+              <span style="font-size: 11px; color: #bb9af7; border: 1px solid rgba(187, 154, 247, 0.4); border-radius: 50%; width: 14px; height: 14px; display: inline-flex; align-items: center; justify-content: center;" title="Mono Downmix: MediaScan strictly evaluates discrete channels (L, R, etc.) independently to prevent artificial averaging or phase cancellation. Check this to also synthesize and score an extra averaged mono mix [L+R]/2 row for comparison.">&#x2139;</span>
             </label>
           </div>
 
@@ -1036,10 +1047,18 @@
           <strong>Independence from E-model MOS:</strong>
           DNSMOS is a standalone speech quality model that evaluates acoustic degradation, speech distortion, and background noise. It does <em>not</em> represent network loss or delay (which are modeled separately by the ITU-T G.107 E-model).
         </div>
-        <div style="border-top: 1px solid rgba(255, 255, 255, 0.08); padding-top: 10px; font-size: 11px; color: var(--text-dim);">
-          <strong>Attribution &amp; License:</strong><br>
-          DNSMOS models &amp; equations are released by Microsoft Corporation under the Creative Commons Attribution 4.0 International (CC-BY-4.0) license.<br>
-          <em>Reference:</em> C. K. A. Reddy et al., &ldquo;DNSMOS P.835: A Non-Intrusive Perceptual Objective Speech Quality Metric to Evaluate Noise Suppressors,&rdquo; in Proc. IEEE ICASSP / INTERSPEECH, 2021&ndash;2022.
+        <div style="border-top: 1px solid rgba(255, 255, 255, 0.08); padding-top: 10px; font-size: 11px; color: var(--text-dim); display: flex; flex-direction: column; gap: 6px;">
+          <div>
+            <strong>Official Microsoft Repository:</strong><br>
+            <a href="https://github.com/microsoft/DNS-Challenge" target="_blank" rel="noopener noreferrer" style="color: #7aa2f7; text-decoration: underline;">https://github.com/microsoft/DNS-Challenge</a>
+          </div>
+          <div>
+            <strong>Attribution &amp; License:</strong><br>
+            DNSMOS models &amp; equations are released by Microsoft Corporation under the Creative Commons Attribution 4.0 International (<a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer" style="color: #7aa2f7; text-decoration: underline;">CC-BY-4.0</a>) license.<br>
+            <em>References:</em><br>
+            &bull; C. K. A. Reddy, V. Gopal, R. Cutler, et al., &ldquo;DNSMOS P.835: A Non-Intrusive Perceptual Objective Speech Quality Metric to Evaluate Noise Suppressors,&rdquo; in <em>Proc. IEEE ICASSP</em>, 2022.<br>
+            &bull; C. K. A. Reddy, V. Gopal, R. Cutler, &ldquo;DNSMOS: A Non-Intrusive Perceptual Objective Speech Quality Metric to Evaluate Noise Suppressors,&rdquo; in <em>Proc. IEEE ICASSP</em>, 2021.
+          </div>
         </div>
       </div>
       <div style="padding: 10px 18px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; background: rgba(0,0,0,0.15);">

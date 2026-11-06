@@ -201,6 +201,32 @@ document.querySelectorAll('.nav-tab').forEach(tab => {
     document.querySelectorAll('.tab-content').forEach(c => (c as HTMLElement).style.display = 'none');
     tab.classList.add('active');
     const targetId = tab.getAttribute('data-tab')!;
+
+    if (targetId === 'tab-dnsmos-tool') {
+      // Standalone DNSMOS Tool tab: works directly with audio files, no PCAP required
+      dropzoneArea.style.display = 'none';
+      dashboard.style.display = 'flex';
+      document.getElementById('tab-dnsmos-tool')!.style.display = 'block';
+      audioPlayer.stop();
+      multiTrackPlayer.pause();
+      playerDock.style.display = 'none';
+      return;
+    }
+
+    // For PCAP-dependent tabs (Ladder, SIP, RTP, Metrics):
+    if (!pipelineResult) {
+      // If no PCAP has been opened yet, show the PCAP dropzone
+      dropzoneArea.style.display = 'flex';
+      dashboard.style.display = 'none';
+      audioPlayer.stop();
+      multiTrackPlayer.pause();
+      playerDock.style.display = 'none';
+      return;
+    }
+
+    // If PCAP is loaded, show dashboard and target tab content
+    dropzoneArea.style.display = 'none';
+    dashboard.style.display = 'flex';
     document.getElementById(targetId)!.style.display = 'block';
 
     if (targetId === 'tab-rtp') {
@@ -228,6 +254,15 @@ document.querySelectorAll('.nav-tab').forEach(tab => {
     }
   });
 });
+
+// Quick switch to DNSMOS tool from initial landing page dropzone
+const btnQuickSwitchDnsmos = document.getElementById('btn-quick-switch-dnsmos');
+if (btnQuickSwitchDnsmos) {
+  btnQuickSwitchDnsmos.addEventListener('click', () => {
+    const dnsmosNavTab = document.querySelector('.nav-tab[data-tab="tab-dnsmos-tool"]') as HTMLElement | null;
+    if (dnsmosNavTab) dnsmosNavTab.click();
+  });
+}
 
 // File opening
 btnOpenFile.addEventListener('click', () => fileInput.click());
