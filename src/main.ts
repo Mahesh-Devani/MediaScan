@@ -9,6 +9,7 @@ import { MultiTrackRenderer } from './media/MultiTrackRenderer.ts';
 import { SnrUiController } from './analysis/SnrUiController.ts';
 import { MosUiController } from './mos/MosUiController.ts';
 import { DnsmosUiController } from './dnsmos/DnsmosUiController.ts';
+import { DnsmosToolController } from './dnsmos/DnsmosToolController.ts';
 import { VideoDecoderPlayer } from './video/VideoDecoderPlayer.ts';
 import type { RtpStream } from './rtp/RtpDemuxer.ts';
 
@@ -125,6 +126,7 @@ if (btnVideoDownloadMp4) {
 SnrUiController.init();
 MosUiController.initialize(() => renderLadder());
 DnsmosUiController.init();
+const dnsmosToolController = new DnsmosToolController();
 
 // Sub-Tab Switching for Audio Quality Analysis: Estimated MOS (E-model) vs SNR Analysis vs DNSMOS (estimated)
 const btnTabMos = document.getElementById('btn-tab-mos');

@@ -21,6 +21,21 @@ export interface DnsmosConfidence {
   reasons: string[];
 }
 
+export interface DnsmosFileInfo {
+  fileName: string;
+  fileHash?: string;
+  channelIndex: number;
+  channelName: string;
+  totalChannels: number;
+  formatName: string;
+  rmsDbfs?: number;
+  peakDbfs?: number;
+  effectiveBandwidthHz?: number;
+  isSilent?: boolean;
+  silenceReason?: string;
+  isMonoDownmix?: boolean;
+}
+
 export interface DnsmosResult {
   streamId: string;
   ssrc: number;
@@ -29,6 +44,7 @@ export interface DnsmosResult {
   codec: string;
   originalSampleRate: number;
   modelSampleRate: number; // 16000
+  fileInfo?: DnsmosFileInfo;
 
   range: {
     startSec: number;
@@ -103,6 +119,7 @@ export interface DnsmosWorkerTask {
   endSec: number;
   isFullStream: boolean;
   options: DnsmosOptions;
+  fileInfo?: DnsmosFileInfo;
 }
 
 export interface DnsmosWorkerResponse {

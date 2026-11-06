@@ -47,6 +47,7 @@
       <div class="nav-tab" data-tab="tab-sip">SIP Dialogs & Signaling</div>
       <div class="nav-tab" data-tab="tab-rtp">RTP Audio Streams</div>
       <div class="nav-tab" data-tab="tab-metrics">RTP Stream Metrics &amp; Telemetry</div>
+      <div class="nav-tab" data-tab="tab-dnsmos-tool">🧠 DNSMOS Tool</div>
     </nav>
 
     <!-- Tab 1: Media Flow Ladder -->
@@ -748,6 +749,161 @@
         </table>
       </div>
     </div>
+
+    <!-- Tab 5: Standalone DNSMOS Tool (No PCAP required) -->
+    <div class="tab-content" id="tab-dnsmos-tool" style="display: none;">
+      <div style="background-color: var(--bg-secondary); border: 1px solid var(--border); border-radius: 8px; padding: 18px 22px; display: flex; flex-direction: column; gap: 16px;">
+        
+        <!-- Header & Description -->
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px;">
+          <div>
+            <h3 style="font-size: 17px; font-weight: 700; color: #fff; margin-bottom: 4px; display: flex; align-items: center; gap: 8px;">
+              <span style="color: #bb9af7;">🧠</span> DNSMOS Tool &mdash; Standalone Speech Quality Analyzer
+            </h3>
+            <p style="font-size: 12px; color: var(--text-dim); margin: 0;">
+              Score audio files (WAV, PCM, AMR, G.711, G.722, G.726, G.729, Opus, MP3, AAC, FLAC) and multi-channel streams directly with zero PCAP required. 100% Client-Side.
+            </p>
+          </div>
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <button class="btn btn-sm" id="btn-tool-export-csv" style="padding: 4px 10px; font-size: 11px;">⬇ Export CSV</button>
+            <button class="btn btn-sm" id="btn-tool-export-json" style="padding: 4px 10px; font-size: 11px;">⬇ Export JSON</button>
+          </div>
+        </div>
+
+        <!-- Multi-File Dropzone Area -->
+        <div id="dnsmos-tool-dropzone" style="border: 2px dashed var(--border); border-radius: 8px; padding: 24px 20px; text-align: center; background: rgba(0,0,0,0.15); transition: border-color 0.2s, background 0.2s; cursor: pointer;">
+          <div style="font-size: 32px; margin-bottom: 8px;">🎵</div>
+          <div style="font-size: 14px; font-weight: 600; color: #fff; margin-bottom: 4px;">Drag &amp; drop audio files or folders here</div>
+          <div style="font-size: 12px; color: var(--text-dim); margin-bottom: 12px;">
+            Supports WAV (PCM 8/16/24/32-bit, Float, Extensible, A-law, &mu;-law, ADPCM), raw G.711, G.722, G.726, G.729, AMR, Opus, MP3, AAC, FLAC.
+          </div>
+          <div style="display: flex; justify-content: center; gap: 10px; flex-wrap: wrap;">
+            <button class="btn btn-primary" id="btn-tool-select-files" style="padding: 6px 16px; font-size: 12px;">📁 Select Audio Files</button>
+            <button class="btn btn-ctrl-sec" id="btn-tool-select-folder" style="padding: 6px 16px; font-size: 12px;">📂 Select Folder</button>
+            <button class="btn btn-ctrl-sec" id="btn-tool-raw-config" style="padding: 6px 16px; font-size: 12px;">⚙️ Import Raw Bitstream / PCM...</button>
+          </div>
+          <input type="file" id="dnsmos-tool-file-input" multiple accept=".wav,.pcm,.raw,.ulaw,.alaw,.g722,.g726,.g729,.amr,.amrwb,.opus,.ogg,.mp3,.m4a,.aac,.flac,.webm" style="display: none;">
+          <input type="file" id="dnsmos-tool-folder-input" webkitdirectory directory multiple style="display: none;">
+        </div>
+
+        <!-- Options Toolbar & Batch Controls -->
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; background: var(--bg-tertiary); padding: 10px 14px; border-radius: 6px; border: 1px solid var(--border);">
+          <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
+            <label style="display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--text-dim); cursor: pointer;" title="Toggle Personalized DNSMOS P.835 model">
+              <input type="checkbox" id="chk-tool-personalized"> Personalized Model
+            </label>
+            <label style="display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--text-dim); cursor: pointer;" title="Compute P.808 Listening MOS">
+              <input type="checkbox" id="chk-tool-p808"> Include P.808 MOS
+            </label>
+            <label style="display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--text-dim); cursor: pointer;" title="Add an extra Mono Downmix row for multi-channel files">
+              <input type="checkbox" id="chk-tool-downmix"> Include Mono Downmix Row
+            </label>
+          </div>
+
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <button class="btn btn-primary" id="btn-tool-score-all" style="padding: 5px 14px; font-size: 12px; font-weight: 700;">▶ Score All Pending</button>
+            <button class="btn btn-ctrl-sec" id="btn-tool-cancel-queue" style="padding: 5px 12px; font-size: 12px; color: #f7768e;">⏹ Cancel Queue</button>
+            <button class="btn btn-ctrl-sec" id="btn-tool-clear-all" style="padding: 5px 12px; font-size: 12px;">🗑 Clear All</button>
+          </div>
+        </div>
+
+        <!-- Progress bar -->
+        <div id="dnsmos-tool-progress-container" style="display: none; background: var(--bg-tertiary); border-radius: 6px; padding: 10px 14px; border: 1px solid var(--border);">
+          <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 6px;">
+            <span id="dnsmos-tool-progress-text">Preparing queue...</span>
+          </div>
+          <div style="width: 100%; height: 8px; background: rgba(0,0,0,0.3); border-radius: 4px; overflow: hidden;">
+            <div id="dnsmos-tool-progress-inner" style="width: 0%; height: 100%; background: #2ac3de; transition: width 0.2s ease;"></div>
+          </div>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <span id="dnsmos-tool-status-text" style="font-size: 12px; color: var(--text-dim);">No files loaded. Drop audio files to begin.</span>
+        </div>
+
+        <!-- Files & Channels Table -->
+        <div style="overflow-x: auto;">
+          <table class="data-table" id="dnsmos-tool-files-table" style="font-size: 12px;">
+            <thead>
+              <tr>
+                <th style="width: 32px; text-align: center;">Sel</th>
+                <th>File &amp; Channel</th>
+                <th>Format</th>
+                <th>Native Rate (Bandwidth)</th>
+                <th>Duration</th>
+                <th>Level (dBFS)</th>
+                <th>SIG (Speech)</th>
+                <th>BAK (Noise)</th>
+                <th>OVRL (Overall)</th>
+                <th>P.808</th>
+                <th>Confidence</th>
+                <th>RTF</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="dnsmos-tool-tbody"></tbody>
+          </table>
+        </div>
+
+        <!-- Multi-Item Compare Drawer -->
+        <div id="dnsmos-tool-compare-drawer" style="display: none; background: var(--bg-tertiary); border: 1px solid #7aa2f7; border-radius: 6px; padding: 14px 18px; margin-top: 10px;">
+          <div style="font-weight: 700; font-size: 14px; color: #7aa2f7; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
+            <span>⚖️</span> Compare Mode (Relative &Delta; against first selected file)
+          </div>
+          <div id="dnsmos-tool-compare-alert" style="display: none; padding: 8px 12px; border-radius: 4px; font-size: 11px; margin-bottom: 10px; background: rgba(224, 175, 104, 0.15); color: #e0af68; border: 1px solid rgba(224, 175, 104, 0.3);"></div>
+          <table class="data-table" style="font-size: 11px;">
+            <thead>
+              <tr>
+                <th>File &amp; Channel</th>
+                <th>Native Rate</th>
+                <th>SIG &Delta;</th>
+                <th>BAK &Delta;</th>
+                <th>OVRL &Delta;</th>
+                <th>P.808</th>
+              </tr>
+            </thead>
+            <tbody id="dnsmos-tool-compare-tbody"></tbody>
+          </table>
+        </div>
+
+        <!-- Interactive Waveform & 3-Trace Timeline Inspection Drawer -->
+        <div id="dnsmos-tool-inspect-drawer" style="display: none; background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: 6px; padding: 16px 20px; margin-top: 10px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 10px;">
+            <div style="font-weight: 700; font-size: 14px; color: #fff;" id="dnsmos-tool-drawer-title">
+              Channel Inspection
+            </div>
+            <!-- Playback Controls & A/B Mode Toggle -->
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <button class="btn btn-primary" id="btn-tool-play" style="padding: 4px 14px; font-size: 12px;">&#x25B6; Play</button>
+              <div style="display: flex; gap: 4px; background: rgba(0,0,0,0.2); padding: 2px; border-radius: 4px;">
+                <button class="btn btn-sm active" id="btn-tool-source-native" style="padding: 2px 8px; font-size: 10px;">Original Channel</button>
+                <button class="btn btn-sm" id="btn-tool-source-16k" style="padding: 2px 8px; font-size: 10px;">16 kHz Model Audio</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Waveform Canvas -->
+          <div style="margin-bottom: 14px;">
+            <div style="font-size: 11px; color: var(--text-dim); margin-bottom: 4px;">Audio Waveform</div>
+            <canvas id="dnsmos-tool-waveform-canvas" height="100" style="width: 100%; border-radius: 4px; display: block;"></canvas>
+          </div>
+
+          <!-- DNSMOS Timeline Canvas -->
+          <div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+              <span style="font-size: 11px; color: var(--text-dim);">Speech Quality Timeline (1s Hops, 9.01s Windows)</span>
+              <div style="display: flex; gap: 12px; font-size: 11px;">
+                <span style="color: #2ac3de;">● SIG</span>
+                <span style="color: #bb9af7;">● BAK</span>
+                <span style="color: #9ece6a;">● OVRL</span>
+              </div>
+            </div>
+            <canvas id="dnsmos-tool-timeline-canvas" height="160" style="width: 100%; border-radius: 4px; display: block;"></canvas>
+          </div>
+        </div>
+
+      </div>
+    </div>
   </div>
 
   <!-- Audio Player Dock -->
@@ -928,6 +1084,86 @@
       <div style="padding: 10px 18px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.15);">
         <button class="btn btn-sm" id="btn-dnsmos-batch-cancel" style="color: #f7768e; border-color: rgba(247, 118, 142, 0.4);">Cancel</button>
         <button class="btn btn-sm btn-primary" onclick="document.getElementById('dnsmos-batch-modal').style.display='none'">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Dialog: Raw Bitstream & PCM Configuration -->
+  <div class="modal-overlay" id="modal-raw-stream-config" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.7); z-index: 10000; align-items: center; justify-content: center;">
+    <div style="background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 8px; width: 500px; max-width: 95vw; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 12px 36px rgba(0,0,0,0.6);">
+      <div style="padding: 14px 18px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
+        <span style="font-weight: 700; font-size: 15px; color: #fff;">⚙️ Import Raw Bitstream / PCM Audio</span>
+        <button class="btn btn-sm" id="btn-close-raw-modal" style="padding: 3px 8px;">✕</button>
+      </div>
+      <div style="padding: 16px 20px; display: flex; flex-direction: column; gap: 14px; font-size: 13px;">
+        <div style="display: flex; flex-direction: column; gap: 4px;">
+          <label style="font-weight: 600; color: var(--text-dim);">Audio Format / Codec:</label>
+          <select id="raw-modal-codec" class="mt-select">
+            <option value="pcm">Raw Linear PCM (Configurable)</option>
+            <option value="g711u">G.711 mu-law (PCMU, 8 kHz)</option>
+            <option value="g711a">G.711 A-law (PCMA, 8 kHz)</option>
+            <option value="g722">ITU-T G.722 SB-ADPCM (16 kHz)</option>
+            <option value="g726">ITU-T G.726 ADPCM (32 kbps, 8 kHz)</option>
+            <option value="g729">ITU-T G.729 CS-ACELP (8 kHz)</option>
+            <option value="amr-nb">3GPP AMR-NB (8 kHz)</option>
+            <option value="amr-wb">3GPP AMR-WB (16 kHz)</option>
+          </select>
+        </div>
+
+        <div id="raw-pcm-options-group" style="display: flex; flex-direction: column; gap: 12px; background: var(--bg-tertiary); padding: 12px; border-radius: 6px; border: 1px solid var(--border);">
+          <div style="display: flex; gap: 12px;">
+            <div style="flex: 1; display: flex; flex-direction: column; gap: 4px;">
+              <label style="font-size: 11px; color: var(--text-dim);">Sample Rate:</label>
+              <select id="raw-modal-rate" class="mt-select">
+                <option value="8000">8,000 Hz</option>
+                <option value="11025">11,025 Hz</option>
+                <option value="16000" selected>16,000 Hz</option>
+                <option value="22050">22,050 Hz</option>
+                <option value="32000">32,000 Hz</option>
+                <option value="44100">44,100 Hz</option>
+                <option value="48000">48,000 Hz</option>
+                <option value="96000">96,000 Hz</option>
+              </select>
+            </div>
+            <div style="flex: 1; display: flex; flex-direction: column; gap: 4px;">
+              <label style="font-size: 11px; color: var(--text-dim);">Channels:</label>
+              <select id="raw-modal-channels" class="mt-select">
+                <option value="1" selected>1 (Mono)</option>
+                <option value="2">2 (Stereo)</option>
+                <option value="6">6 (5.1 Surround)</option>
+                <option value="8">8 (7.1 Surround)</option>
+              </select>
+            </div>
+          </div>
+
+          <div style="display: flex; gap: 12px;">
+            <div style="flex: 1; display: flex; flex-direction: column; gap: 4px;">
+              <label style="font-size: 11px; color: var(--text-dim);">Bit Depth &amp; Format:</label>
+              <select id="raw-modal-bits" class="mt-select">
+                <option value="16-int" selected>16-bit Signed Integer</option>
+                <option value="8-uint">8-bit Unsigned Integer</option>
+                <option value="24-int">24-bit Signed Integer</option>
+                <option value="32-int">32-bit Signed Integer</option>
+                <option value="32-float">32-bit IEEE Float</option>
+              </select>
+            </div>
+            <div style="flex: 1; display: flex; flex-direction: column; gap: 4px;">
+              <label style="font-size: 11px; color: var(--text-dim);">Byte Order (Endianness):</label>
+              <select id="raw-modal-endian" class="mt-select">
+                <option value="le" selected>Little Endian (Standard)</option>
+                <option value="be">Big Endian</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div style="font-size: 11px; color: var(--text-dim);">
+          Clicking "Select File" will open your file browser to pick the raw binary file with these parameters applied.
+        </div>
+      </div>
+      <div style="padding: 10px 18px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 10px; background: rgba(0,0,0,0.15);">
+        <button class="btn btn-sm" onclick="document.getElementById('modal-raw-stream-config').style.display='none'">Cancel</button>
+        <button class="btn btn-sm btn-primary" id="btn-apply-raw-config">Select File &amp; Import</button>
       </div>
     </div>
   </div>

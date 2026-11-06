@@ -14,6 +14,7 @@ import type {
   DnsmosOptions,
   DnsmosWorkerTask,
   DnsmosWorkerResponse,
+  DnsmosFileInfo,
 } from './DnsmosTypes.ts';
 import { AudioResampler } from './AudioResampler.ts';
 import { processDnsmosTask } from '../workers/dnsmos.worker.ts';
@@ -42,6 +43,7 @@ export class DnsmosEngine {
       startSec?: number;
       endSec?: number;
       isFullStream?: boolean;
+      fileInfo?: DnsmosFileInfo;
     },
     options: DnsmosOptions = {}
   ): Promise<DnsmosResult> {
@@ -52,7 +54,9 @@ export class DnsmosEngine {
     const isFullStream = meta.isFullStream !== false;
 
     // 1. Check cache
-    const cacheKey = `${meta.ssrc}_${startSec.toFixed(2)}_${endSec.toFixed(2)}_${isPersonalized}_${includeP808}`;
+    const cacheKey = meta.fileInfo
+      ? `${meta.fileInfo.fileName}_ch${meta.fileInfo.channelIndex}_${startSec.toFixed(2)}_${endSec.toFixed(2)}_${isPersonalized}_${includeP808}`
+      : `${meta.ssrc}_${startSec.toFixed(2)}_${endSec.toFixed(2)}_${isPersonalized}_${includeP808}`;
     if (this.resultCache.has(cacheKey)) {
       return this.resultCache.get(cacheKey)!;
     }
@@ -74,6 +78,7 @@ export class DnsmosEngine {
       endSec,
       isFullStream,
       options,
+      fileInfo: meta.fileInfo,
     };
 
     // 3. Execution: Browser Worker vs Node direct execution

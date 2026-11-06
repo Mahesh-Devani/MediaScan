@@ -240,6 +240,7 @@ export async function processDnsmosTask(task: DnsmosWorkerTask): Promise<DnsmosR
     codec: task.codec,
     originalSampleRate: task.originalSampleRate,
     modelSampleRate: fs,
+    fileInfo: task.fileInfo,
 
     range: {
       startSec: task.startSec,
