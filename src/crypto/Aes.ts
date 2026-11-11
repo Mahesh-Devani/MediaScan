@@ -297,7 +297,8 @@ export class Aes {
 
     const processBlock = (block: Uint8Array) => {
       for (let i = 0; i < 16; i++) y[i] ^= block[i];
-      y = Aes.ghashMul(y, H);
+      const nextY = Aes.ghashMul(y, H);
+      y.set(nextY);
     };
 
     // 1. Process AAD blocks (16-byte padded)

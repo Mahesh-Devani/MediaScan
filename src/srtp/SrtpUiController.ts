@@ -394,6 +394,12 @@ export class SrtpUiController {
   public async importExtractedKeys(keys: ExtractedLogKey[]): Promise<number> {
     let imported = 0;
     for (const k of keys) {
+      if (k.format === 'nss-sslkeylog' && k.clientRandomHex && k.masterSecretHex) {
+        this.keyRegistry.registerNssKeyLog(k.clientRandomHex, k.masterSecretHex);
+        imported++;
+        continue;
+      }
+
       const crypto: SdesCrypto = {
         tag: 1,
         cryptoSuite: k.cryptoSuite,

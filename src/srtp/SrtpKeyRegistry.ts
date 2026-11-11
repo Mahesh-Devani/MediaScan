@@ -10,6 +10,8 @@
 
 import { SdesParser } from './SdesParser.ts';
 import { SrtpContext } from './SrtpContext.ts';
+import { DtlsExporter } from '../dtls/DtlsExporter.ts';
+import type { DtlsHandshakeInfo } from '../dtls/DtlsParser.ts';
 import type { SdesCrypto, SrtpCryptoSuite } from './SrtpTypes.ts';
 import type { SipDialog } from '../sip/DialogManager.ts';
 
@@ -32,6 +34,7 @@ export class SrtpKeyRegistry {
   private ssrcMap = new Map<number, SrtpContext>();
   private endpointMap = new Map<string, SrtpContext>(); // "ip:port" -> context
   private records: KeyRecord[] = [];
+  private nssKeyLogs = new Map<string, string>(); // clientRandomHex -> masterSecretHex
 
   /**
    * Emergency kill switch to bypass all SRTP/DTLS decryption and restore 100% baseline behavior.
@@ -80,6 +83,69 @@ export class SrtpKeyRegistry {
       source,
       srcEndpoint: ep,
     });
+  }
+
+  /**
+   * Registers NSS SSLKEYLOGFILE master secret mapped to client_random.
+   */
+  public registerNssKeyLog(clientRandomHex: string, masterSecretHex: string): void {
+    this.nssKeyLogs.set(clientRandomHex.toLowerCase(), masterSecretHex.toLowerCase());
+  }
+
+  /**
+   * Derives and registers SRTP keys from a parsed DTLS 1.2 handshake if matching NSS key log is present.
+   */
+  public registerDtlsHandshake(info: DtlsHandshakeInfo): boolean {
+    if (SrtpKeyRegistry.killSwitchEnabled) return false;
+    if (!info.clientRandom || !info.serverRandom) return false;
+
+    const crHex = Array.from(info.clientRandom).map(b => b.toString(16).padStart(2, '0')).join('').toLowerCase();
+    const msHex = this.nssKeyLogs.get(crHex);
+    if (!msHex) return false;
+
+    const suite = info.negotiatedProfile || 'AES_CM_128_HMAC_SHA1_80';
+    const msBytes = new Uint8Array(msHex.length / 2);
+    for (let i = 0; i < msBytes.length; i++) {
+      msBytes[i] = parseInt(msHex.substring(i * 2, i * 2 + 2), 16);
+    }
+
+    const exported = DtlsExporter.exportKeys(msBytes, info.clientRandom, info.serverRandom, suite);
+
+    // Register Client -> Server key
+    if (info.clientEndpoint) {
+      const clientCrypto: SdesCrypto = {
+        tag: 1,
+        cryptoSuite: suite,
+        masterKey: exported.clientKey,
+        masterSalt: exported.clientSalt,
+        unencryptedSrtp: false,
+        unencryptedSrtcp: false,
+        unauthenticatedSrtp: false,
+        kdr: 0,
+        rawInline: '',
+      };
+      const [ip, port] = info.clientEndpoint.split(':');
+      this.registerEndpointKey(ip, parseInt(port, 10), clientCrypto, 'log');
+    }
+
+    // Register Server -> Client key
+    if (info.serverEndpoint) {
+      const serverCrypto: SdesCrypto = {
+        tag: 2,
+        cryptoSuite: suite,
+        masterKey: exported.serverKey,
+        masterSalt: exported.serverSalt,
+        unencryptedSrtp: false,
+        unencryptedSrtcp: false,
+        unauthenticatedSrtp: false,
+        kdr: 0,
+        rawInline: '',
+      };
+      const [ip, port] = info.serverEndpoint.split(':');
+      this.registerEndpointKey(ip, parseInt(port, 10), serverCrypto, 'log');
+    }
+
+    return true;
   }
 
   /**

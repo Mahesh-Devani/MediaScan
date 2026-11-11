@@ -10,6 +10,7 @@ import { AnomalyDetector } from './ladder/AnomalyDetector.ts';
 import { MosEngine } from './mos/MosEngine.ts';
 import { StreamAudioDecoder } from './decoders/StreamAudioDecoder.ts';
 import { SrtpKeyRegistry } from './srtp/SrtpKeyRegistry.ts';
+import { DtlsParser, type DtlsHandshakeInfo } from './dtls/DtlsParser.ts';
 import type { Conversation, Leg, MediaServer } from './ladder/LadderTypes.ts';
 import type { RtpStream } from './rtp/RtpDemuxer.ts';
 import type { SipDialog } from './sip/DialogManager.ts';
@@ -41,6 +42,7 @@ export class CapturePipeline {
     const msDetector = new MediaServerDetector();
     const keyRegistry = new SrtpKeyRegistry();
     const secureEndpoints = new Set<string>();
+    const dtlsSessions = new Map<string, DtlsHandshakeInfo>();
 
     if (userPinnedMsIp) {
       msDetector.setUserPinnedIp(userPinnedMsIp);
@@ -111,7 +113,22 @@ export class CapturePipeline {
           }
         }
 
-        // 2. RTP Check (RFC 3550)
+        // 2. DTLS Check (RFC 7983: ContentType 20..63)
+        if (DtlsParser.isDtls(payload)) {
+          const tuple = `${srcIp}:${srcPort}-${dstIp}:${dstPort}`;
+          const revTuple = `${dstIp}:${dstPort}-${srcIp}:${srcPort}`;
+          let dtlsState = dtlsSessions.get(tuple) || dtlsSessions.get(revTuple);
+          if (!dtlsState) {
+            dtlsState = {};
+            dtlsSessions.set(tuple, dtlsState);
+          }
+          DtlsParser.parseHandshake(payload, `${srcIp}:${srcPort}`, `${dstIp}:${dstPort}`, dtlsState);
+          keyRegistry.registerDtlsHandshake(dtlsState);
+          secureEndpoints.add(`${srcIp}:${srcPort}`);
+          secureEndpoints.add(`${dstIp}:${dstPort}`);
+        }
+
+        // 3. RTP Check (RFC 3550)
         const rtp = RtpDemuxer.parseRtp(payload);
         if (rtp) {
           rtpPackets++;
