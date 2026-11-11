@@ -1,0 +1,806 @@
+{
+  "generatedAt": "2026-11-11T11:17:57.173Z",
+  "gitCommit": "d401063",
+  "gitTag": "pre-srtp-baseline",
+  "nodeVersion": "v24.14.1",
+  "pcaps": {
+    "mrfp-o.pcap": {
+      "filename": "mrfp-o.pcap",
+      "fileSizeBytes": 5590380,
+      "parseTimeMs": 276.94,
+      "stats": {
+        "totalFrames": 24993,
+        "sipPackets": 164,
+        "rtpPackets": 15785,
+        "rtcpPackets": 0,
+        "duplicatesDropped": 87
+      },
+      "mediaServer": {
+        "ip": "fd5d:d50a:8c17:2110::547"
+      },
+      "dialogCount": 4,
+      "dialogs": [
+        {
+          "callId": "6ae1c3ff@[fd5d:d50a:8c17:2140::87e]:5065",
+          "from": "user",
+          "to": "msml",
+          "state": "Confirmed",
+          "offerCodec": "pcmu",
+          "answerCodec": "PCMU",
+          "startTime": 1793188178.268,
+          "endTime": 1793188224.089
+        },
+        {
+          "callId": "6ae1c400@[fd5d:d50a:8c17:2140::87e]:5065",
+          "from": "user",
+          "to": "msml",
+          "state": "Confirmed",
+          "offerCodec": "g722",
+          "answerCodec": "G722",
+          "startTime": 1793188178.472,
+          "endTime": 1793188178.957
+        },
+        {
+          "callId": "6ae1c401@[fd5d:d50a:8c17:2140::87e]:5065",
+          "from": "user",
+          "to": "msml",
+          "state": "Confirmed",
+          "offerCodec": "amr",
+          "answerCodec": "AMR",
+          "startTime": 1793188178.53,
+          "endTime": 1793188178.969
+        },
+        {
+          "callId": "6ae1c402@[fd5d:d50a:8c17:2140::87e]:5065",
+          "from": "user",
+          "to": "msml",
+          "state": "Confirmed",
+          "offerCodec": "amr-wb",
+          "answerCodec": "AMR-WB",
+          "startTime": 1793188178.589,
+          "endTime": 1793188178.98
+        }
+      ],
+      "legCount": 4,
+      "legs": [
+        {
+          "id": "Leg A",
+          "callId": "6ae1c3ff@[fd5d:d50a:8c17:2140::87e]:5065",
+          "remote": {
+            "ip": "fd5d:d50a:8c17:2110::87e",
+            "port": 10048
+          },
+          "ms": {
+            "ip": "fd5d:d50a:8c17:2110::547",
+            "port": 8194
+          },
+          "inboundSsrc": 1208512104,
+          "outboundSsrc": 1619045890,
+          "anomalies": [],
+          "isCorrelatedWithSip": true
+        },
+        {
+          "id": "Leg B",
+          "callId": "6ae1c400@[fd5d:d50a:8c17:2140::87e]:5065",
+          "remote": {
+            "ip": "fd5d:d50a:8c17:2110::87e",
+            "port": 10054
+          },
+          "ms": {
+            "ip": "fd5d:d50a:8c17:2110::547",
+            "port": 9218
+          },
+          "inboundSsrc": 1403921308,
+          "outboundSsrc": 1613948933,
+          "anomalies": [],
+          "isCorrelatedWithSip": true
+        },
+        {
+          "id": "Leg C",
+          "callId": "6ae1c401@[fd5d:d50a:8c17:2140::87e]:5065",
+          "remote": {
+            "ip": "fd5d:d50a:8c17:2110::87e",
+            "port": 10060
+          },
+          "ms": {
+            "ip": "fd5d:d50a:8c17:2110::547",
+            "port": 10242
+          },
+          "inboundSsrc": 1744888485,
+          "outboundSsrc": 1065873160,
+          "anomalies": [],
+          "isCorrelatedWithSip": true
+        },
+        {
+          "id": "Leg D",
+          "callId": "6ae1c402@[fd5d:d50a:8c17:2140::87e]:5065",
+          "remote": {
+            "ip": "fd5d:d50a:8c17:2110::87e",
+            "port": 10066
+          },
+          "ms": {
+            "ip": "fd5d:d50a:8c17:2110::547",
+            "port": 11266
+          },
+          "inboundSsrc": 620399455,
+          "outboundSsrc": 1962129675,
+          "anomalies": [],
+          "isCorrelatedWithSip": true
+        }
+      ],
+      "conversationCount": 1,
+      "conversations": [
+        {
+          "id": "Conversation 1",
+          "classification": "Conference",
+          "legIds": [
+            "Leg A",
+            "Leg B",
+            "Leg C",
+            "Leg D"
+          ],
+          "startTime": 1793188178.455,
+          "endTime": 1793188236.99
+        }
+      ],
+      "streams": [
+        {
+          "ssrc": 620399455,
+          "payloadType": 101,
+          "codec": "AMR-WB",
+          "packetCount": 2919,
+          "lossCount": 0,
+          "lossPercent": 0,
+          "jitterUs": 513.01,
+          "duration": 58.361,
+          "startTime": 1793188178.629,
+          "endTime": 1793188236.99,
+          "src": "fd5d:d50a:8c17:2110::87e:10066",
+          "dst": "fd5d:d50a:8c17:2110::547:11266",
+          "direction": "inbound",
+          "mos": 4.265,
+          "rFactor": 87.2,
+          "pcmSha256": "549047e054d2dc2a55e84b742ccdc5af7ac101c2975a8071e4eb7fb26586187c",
+          "pcmSampleCount": 934080,
+          "sampleRate": 16000,
+          "wavSha256": "3e9c1b9277026bdc300611cd573180ce3224588a04f3a85299ce137ec6e26cb8",
+          "snrDb": 54.5,
+          "noiseFloorDbfs": -85.1
+        },
+        {
+          "ssrc": 1065873160,
+          "payloadType": 100,
+          "codec": "AMR",
+          "packetCount": 1258,
+          "lossCount": 0,
+          "lossPercent": 0,
+          "jitterUs": 33.9,
+          "duration": 45.02,
+          "startTime": 1793188178.983,
+          "endTime": 1793188224.003,
+          "src": "fd5d:d50a:8c17:2110::547:10242",
+          "dst": "fd5d:d50a:8c17:2110::87e:10060",
+          "direction": "outbound",
+          "mos": 4.292,
+          "rFactor": 88.2,
+          "pcmSha256": "2554fa985364fab98f28385875141a2fe335070d4872eb8d781e2c42f6847b1b",
+          "pcmSampleCount": 360320,
+          "sampleRate": 8000,
+          "wavSha256": "a5d320ae7e8dcbcf56c4e87e25862f35e186330e0b5d41f5f6cf34656cfc075b",
+          "snrDb": 56.4,
+          "noiseFloorDbfs": -83.9
+        },
+        {
+          "ssrc": 1208512104,
+          "payloadType": 0,
+          "codec": "PCMU",
+          "packetCount": 2282,
+          "lossCount": 0,
+          "lossPercent": 0,
+          "jitterUs": 489.63,
+          "duration": 45.62,
+          "startTime": 1793188178.455,
+          "endTime": 1793188224.076,
+          "src": "fd5d:d50a:8c17:2110::87e:10048",
+          "dst": "fd5d:d50a:8c17:2110::547:8194",
+          "direction": "inbound",
+          "mos": 4.409,
+          "rFactor": 93.2,
+          "pcmSha256": "076261e90df00173d0501d69e17a83e008d14c53e8c610d82ff5ffaae2a3af88",
+          "pcmSampleCount": 365120,
+          "sampleRate": 8000,
+          "wavSha256": "b4bec93e581f114606948bfdaf9919fb2695c7d1596d31a70d7b259af05b1773",
+          "snrDb": 112.7,
+          "noiseFloorDbfs": -140
+        },
+        {
+          "ssrc": 1403921308,
+          "payloadType": 9,
+          "codec": "G722",
+          "packetCount": 2925,
+          "lossCount": 0,
+          "lossPercent": 0,
+          "jitterUs": 555.3,
+          "duration": 58.481,
+          "startTime": 1793188178.509,
+          "endTime": 1793188236.99,
+          "src": "fd5d:d50a:8c17:2110::87e:10054",
+          "dst": "fd5d:d50a:8c17:2110::547:9218",
+          "direction": "inbound",
+          "mos": 4.026,
+          "rFactor": 80.05,
+          "pcmSha256": "5844d5139efcc640ca78fadde2593615f0b930c010b022e2874d78305ac2f85e",
+          "pcmSampleCount": 936000,
+          "sampleRate": 16000,
+          "wavSha256": "9b1007d2b8a35e60ea751db7b3755efa905dfc20caeaf6a053d76a83c1926de2",
+          "snrDb": 43.1,
+          "noiseFloorDbfs": -77.1
+        },
+        {
+          "ssrc": 1613948933,
+          "payloadType": 9,
+          "codec": "G722",
+          "packetCount": 1098,
+          "lossCount": 0,
+          "lossPercent": 0,
+          "jitterUs": 43.89,
+          "duration": 40.22,
+          "startTime": 1793188178.974,
+          "endTime": 1793188219.194,
+          "src": "fd5d:d50a:8c17:2110::547:9218",
+          "dst": "fd5d:d50a:8c17:2110::87e:10054",
+          "direction": "outbound",
+          "mos": 4.032,
+          "rFactor": 80.2,
+          "pcmSha256": "768f24f69ec7908388576812b54462e1a866e9834c04c154d5d6e26a87f1ca36",
+          "pcmSampleCount": 643841,
+          "sampleRate": 16000,
+          "wavSha256": "c8a6a30ff8bb760ab4b9237a1d67e0e7debea6afb935a3f4acdc167eee35a271",
+          "snrDb": 55.9,
+          "noiseFloorDbfs": -83.2
+        },
+        {
+          "ssrc": 1619045890,
+          "payloadType": 0,
+          "codec": "PCMU",
+          "packetCount": 1093,
+          "lossCount": 0,
+          "lossPercent": 0,
+          "jitterUs": 52.43,
+          "duration": 40.23,
+          "startTime": 1793188178.962,
+          "endTime": 1793188219.192,
+          "src": "fd5d:d50a:8c17:2110::547:8194",
+          "dst": "fd5d:d50a:8c17:2110::87e:10048",
+          "direction": "outbound",
+          "mos": 4.409,
+          "rFactor": 93.2,
+          "pcmSha256": "a22e7a8990edd86aea8788dc23e1ab6310e130323f9508001f7b218e235d4244",
+          "pcmSampleCount": 321998,
+          "sampleRate": 8000,
+          "wavSha256": "74cb17af8149fcb9b1bf4d7636796e2c36bdb819cf363146b4812cff2996c0dd",
+          "snrDb": 58.9,
+          "noiseFloorDbfs": -85.8
+        },
+        {
+          "ssrc": 1744888485,
+          "payloadType": 100,
+          "codec": "AMR",
+          "packetCount": 2921,
+          "lossCount": 0,
+          "lossPercent": 0,
+          "jitterUs": 571.81,
+          "duration": 58.4,
+          "startTime": 1793188178.573,
+          "endTime": 1793188236.973,
+          "src": "fd5d:d50a:8c17:2110::87e:10060",
+          "dst": "fd5d:d50a:8c17:2110::547:10242",
+          "direction": "inbound",
+          "mos": 4.292,
+          "rFactor": 88.2,
+          "pcmSha256": "e9deed1c5417360d02c8b5b41a9f5c7e7fa5abb378e7013d93ddb387c03fa293",
+          "pcmSampleCount": 467360,
+          "sampleRate": 8000,
+          "wavSha256": "7b0161daa340f39d8ba5cb97233e55a99a90e7c57d372213e74e61a80e8b18aa",
+          "snrDb": 42.2,
+          "noiseFloorDbfs": -68.7
+        },
+        {
+          "ssrc": 1962129675,
+          "payloadType": 101,
+          "codec": "AMR-WB",
+          "packetCount": 1289,
+          "lossCount": 0,
+          "lossPercent": 0,
+          "jitterUs": 31.34,
+          "duration": 44.94,
+          "startTime": 1793188178.998,
+          "endTime": 1793188223.938,
+          "src": "fd5d:d50a:8c17:2110::547:11266",
+          "dst": "fd5d:d50a:8c17:2110::87e:10066",
+          "direction": "outbound",
+          "mos": 4.265,
+          "rFactor": 87.2,
+          "pcmSha256": "503c0d134196d3bfbafd1d515f924ab704a61ce4b80d82399683a1904d2c6b3a",
+          "pcmSampleCount": 719361,
+          "sampleRate": 16000,
+          "wavSha256": "9ea3c98baba86e0037f9e66cd3a28f334c71df65d54ffd9d65065e231ad2f871",
+          "snrDb": 57.1,
+          "noiseFloorDbfs": -83.3
+        }
+      ]
+    },
+    "mrfp-1.pcap": {
+      "filename": "mrfp-1.pcap",
+      "fileSizeBytes": 12657727,
+      "parseTimeMs": 501.33,
+      "stats": {
+        "totalFrames": 42599,
+        "sipPackets": 244,
+        "rtpPackets": 32543,
+        "rtcpPackets": 0,
+        "duplicatesDropped": 35
+      },
+      "mediaServer": {
+        "ip": "fd5d:d50a:8c17:2110::547"
+      },
+      "dialogCount": 5,
+      "dialogs": [
+        {
+          "callId": "6ae4a87f@[fd5d:d50a:8c17:2140::87e]:5065",
+          "from": "user",
+          "to": "msml",
+          "state": "Confirmed",
+          "offerCodec": "pcmu",
+          "answerCodec": "PCMU",
+          "startTime": 1793370267.36,
+          "endTime": 1793370268.441
+        },
+        {
+          "callId": "6ae4a881@[fd5d:d50a:8c17:2140::87e]:5065",
+          "from": "user",
+          "to": "msml",
+          "state": "Confirmed",
+          "offerCodec": "pcmu",
+          "answerCodec": "PCMU",
+          "startTime": 1793370270.62,
+          "endTime": 1793370356.158
+        },
+        {
+          "callId": "6ae4a882@[fd5d:d50a:8c17:2140::87e]:5065",
+          "from": "user",
+          "to": "msml",
+          "state": "Confirmed",
+          "offerCodec": "evs",
+          "answerCodec": "EVS",
+          "startTime": 1793370270.674,
+          "endTime": 1793370351.089
+        },
+        {
+          "callId": "6ae4a883@[fd5d:d50a:8c17:2140::87e]:5065",
+          "from": "user",
+          "to": "msml",
+          "state": "Confirmed",
+          "offerCodec": "evs",
+          "answerCodec": "EVS",
+          "startTime": 1793370270.742,
+          "endTime": 1793370351.101
+        },
+        {
+          "callId": "6ae4a884@[fd5d:d50a:8c17:2140::87e]:5065",
+          "from": "user",
+          "to": "msml",
+          "state": "Confirmed",
+          "offerCodec": "evs",
+          "answerCodec": "EVS",
+          "startTime": 1793370270.8,
+          "endTime": 1793370351.109
+        }
+      ],
+      "legCount": 7,
+      "legs": [
+        {
+          "id": "Leg A",
+          "remote": {
+            "ip": "fd5d:d50a:8c17:2110::87e",
+            "port": 10018
+          },
+          "ms": {
+            "ip": "fd5d:d50a:8c17:2110::547",
+            "port": 10312
+          },
+          "outboundSsrc": 1258967561,
+          "anomalies": [
+            "one_way_media",
+            "low_mos"
+          ],
+          "isCorrelatedWithSip": false
+        },
+        {
+          "id": "Leg B",
+          "remote": {
+            "ip": "fd5d:d50a:8c17:2110::87e",
+            "port": 10012
+          },
+          "ms": {
+            "ip": "fd5d:d50a:8c17:2110::547",
+            "port": 9290
+          },
+          "outboundSsrc": 1773200902,
+          "anomalies": [
+            "one_way_media",
+            "low_mos"
+          ],
+          "isCorrelatedWithSip": false
+        },
+        {
+          "id": "Leg C",
+          "callId": "6ae4a87f@[fd5d:d50a:8c17:2140::87e]:5065",
+          "remote": {
+            "ip": "fd5d:d50a:8c17:2110::87e",
+            "port": 10000
+          },
+          "ms": {
+            "ip": "fd5d:d50a:8c17:2110::547",
+            "port": 8330
+          },
+          "inboundSsrc": 305142866,
+          "anomalies": [
+            "one_way_media"
+          ],
+          "isCorrelatedWithSip": true
+        },
+        {
+          "id": "Leg D",
+          "callId": "6ae4a881@[fd5d:d50a:8c17:2140::87e]:5065",
+          "remote": {
+            "ip": "fd5d:d50a:8c17:2110::87e",
+            "port": 10006
+          },
+          "ms": {
+            "ip": "fd5d:d50a:8c17:2110::547",
+            "port": 8332
+          },
+          "inboundSsrc": 1805029197,
+          "outboundSsrc": 1916911378,
+          "anomalies": [],
+          "isCorrelatedWithSip": true
+        },
+        {
+          "id": "Leg E",
+          "callId": "6ae4a882@[fd5d:d50a:8c17:2140::87e]:5065",
+          "remote": {
+            "ip": "fd5d:d50a:8c17:2110::87e",
+            "port": 10012
+          },
+          "ms": {
+            "ip": "fd5d:d50a:8c17:2110::547",
+            "port": 9292
+          },
+          "inboundSsrc": 1290183176,
+          "outboundSsrc": 2056715541,
+          "anomalies": [],
+          "isCorrelatedWithSip": true
+        },
+        {
+          "id": "Leg F",
+          "callId": "6ae4a883@[fd5d:d50a:8c17:2140::87e]:5065",
+          "remote": {
+            "ip": "fd5d:d50a:8c17:2110::87e",
+            "port": 10018
+          },
+          "ms": {
+            "ip": "fd5d:d50a:8c17:2110::547",
+            "port": 10314
+          },
+          "inboundSsrc": 1310450337,
+          "outboundSsrc": 329422872,
+          "anomalies": [],
+          "isCorrelatedWithSip": true
+        },
+        {
+          "id": "Leg G",
+          "callId": "6ae4a884@[fd5d:d50a:8c17:2140::87e]:5065",
+          "remote": {
+            "ip": "fd5d:d50a:8c17:2110::87e",
+            "port": 10024
+          },
+          "ms": {
+            "ip": "fd5d:d50a:8c17:2110::547",
+            "port": 11334
+          },
+          "inboundSsrc": 551937520,
+          "outboundSsrc": 109016091,
+          "anomalies": [],
+          "isCorrelatedWithSip": true
+        }
+      ],
+      "conversationCount": 2,
+      "conversations": [
+        {
+          "id": "Conversation 1",
+          "classification": "Bridged",
+          "legIds": [
+            "Leg A",
+            "Leg B"
+          ],
+          "startTime": 1793370258.087,
+          "endTime": 1793370268.416
+        },
+        {
+          "id": "Conversation 2",
+          "classification": "Conference",
+          "legIds": [
+            "Leg C",
+            "Leg D",
+            "Leg E",
+            "Leg F",
+            "Leg G"
+          ],
+          "startTime": 1793370267.4,
+          "endTime": 1793370364.007
+        }
+      ],
+      "streams": [
+        {
+          "ssrc": 109016091,
+          "payloadType": 107,
+          "codec": "EVS",
+          "packetCount": 1428,
+          "lossCount": 0,
+          "lossPercent": 0,
+          "jitterUs": 40.58,
+          "duration": 85.28,
+          "startTime": 1793370270.916,
+          "endTime": 1793370356.196,
+          "src": "fd5d:d50a:8c17:2110::547:11334",
+          "dst": "fd5d:d50a:8c17:2110::87e:10024",
+          "direction": "outbound",
+          "mos": 4.319,
+          "rFactor": 89.2,
+          "pcmSha256": "c2285274424e68a6adccf8981317cc624858244bfe2afc44beda1f5e388920de",
+          "pcmSampleCount": 2729596,
+          "sampleRate": 32000,
+          "wavSha256": "ec80e7ff83361fbfd0d4ec10187aa0bbca16b6ce9d9564c44f96254ec326c48c",
+          "snrDb": 64.8,
+          "noiseFloorDbfs": -85.3
+        },
+        {
+          "ssrc": 305142866,
+          "payloadType": 0,
+          "codec": "PCMU",
+          "packetCount": 54,
+          "lossCount": 0,
+          "lossPercent": 0,
+          "jitterUs": 245.92,
+          "duration": 1.061,
+          "startTime": 1793370267.4,
+          "endTime": 1793370268.461,
+          "src": "fd5d:d50a:8c17:2110::87e:10000",
+          "dst": "fd5d:d50a:8c17:2110::547:8330",
+          "direction": "inbound",
+          "mos": 4.409,
+          "rFactor": 93.2,
+          "pcmSha256": "55ecc6e1af2de98d63e14a413199b378c013252b5d30ed742aec47414350b24d",
+          "pcmSampleCount": 8640,
+          "sampleRate": 8000,
+          "wavSha256": "b99c257d6dc617139402f2933c10079b3a09c065fd3c7c9e458bb4ab6b1232d0",
+          "snrDb": null,
+          "noiseFloorDbfs": null
+        },
+        {
+          "ssrc": 329422872,
+          "payloadType": 106,
+          "codec": "EVS-HF",
+          "packetCount": 4664,
+          "lossCount": 0,
+          "lossPercent": 0,
+          "jitterUs": 10.06,
+          "duration": 93.26,
+          "startTime": 1793370270.747,
+          "endTime": 1793370364.007,
+          "src": "fd5d:d50a:8c17:2110::547:10314",
+          "dst": "fd5d:d50a:8c17:2110::87e:10018",
+          "direction": "outbound",
+          "mos": 4.319,
+          "rFactor": 89.2,
+          "pcmSha256": "cfea786dea06d063beb3b3f725fee16612f160713b9e6a0cb0c94044900e9206",
+          "pcmSampleCount": 1492480,
+          "sampleRate": 16000,
+          "wavSha256": "5a93c65b6aca51428ae61974b0a83afad5a0184da8cf54a9e2470b0034faefc9",
+          "snrDb": 59.1,
+          "noiseFloorDbfs": -82.6
+        },
+        {
+          "ssrc": 551937520,
+          "payloadType": 107,
+          "codec": "EVS",
+          "packetCount": 4659,
+          "lossCount": 0,
+          "lossPercent": 0,
+          "jitterUs": 325.54,
+          "duration": 93.16,
+          "startTime": 1793370270.838,
+          "endTime": 1793370363.998,
+          "src": "fd5d:d50a:8c17:2110::87e:10024",
+          "dst": "fd5d:d50a:8c17:2110::547:11334",
+          "direction": "inbound",
+          "mos": 4.319,
+          "rFactor": 89.2,
+          "pcmSha256": "56bb888e344c7cb30386415bfa2ca167e05ac52a126dd70fcb247da29947507b",
+          "pcmSampleCount": 2981760,
+          "sampleRate": 32000,
+          "wavSha256": "6438e783ce71ea3724d8ad9ac22b9d32c642f9c9f1442b7716f3872aa01caa55",
+          "snrDb": 55.7,
+          "noiseFloorDbfs": -89.7
+        },
+        {
+          "ssrc": 1258967561,
+          "payloadType": 106,
+          "codec": "EVS-HF",
+          "packetCount": 517,
+          "lossCount": 0,
+          "lossPercent": 0,
+          "jitterUs": 19999.79,
+          "duration": 10.32,
+          "startTime": 1793370258.087,
+          "endTime": 1793370268.407,
+          "src": "fd5d:d50a:8c17:2110::547:10312",
+          "dst": "fd5d:d50a:8c17:2110::87e:10018",
+          "direction": "outbound",
+          "mos": 1.068,
+          "rFactor": 12.17,
+          "pcmSha256": "3df5a3acff172349c91286eb7b3b67dd6f0e4d1eea995334d07b269c2165f8c1",
+          "pcmSampleCount": 165440,
+          "sampleRate": 16000,
+          "wavSha256": "18de4437b6855a10f9e622227dca056068d0eb0c0d240e97bfe6f8678ab6103d",
+          "snrDb": null,
+          "noiseFloorDbfs": null
+        },
+        {
+          "ssrc": 1290183176,
+          "payloadType": 105,
+          "codec": "EVS-HF",
+          "packetCount": 4665,
+          "lossCount": 0,
+          "lossPercent": 0,
+          "jitterUs": 273.27,
+          "duration": 93.28,
+          "startTime": 1793370270.724,
+          "endTime": 1793370364.004,
+          "src": "fd5d:d50a:8c17:2110::87e:10012",
+          "dst": "fd5d:d50a:8c17:2110::547:9292",
+          "direction": "inbound",
+          "mos": 4.319,
+          "rFactor": 89.2,
+          "pcmSha256": "6203b85d8933da4d1f338d42f420eee819a7dd23b6a0bb48d6d0bd36fd62d079",
+          "pcmSampleCount": 746400,
+          "sampleRate": 8000,
+          "wavSha256": "b3c952f736aa189c382204284640e25118d9dab16737a88ef859ccc665a06097",
+          "snrDb": 83.3,
+          "noiseFloorDbfs": -103.2
+        },
+        {
+          "ssrc": 1310450337,
+          "payloadType": 106,
+          "codec": "EVS-HF",
+          "packetCount": 4662,
+          "lossCount": 0,
+          "lossPercent": 0,
+          "jitterUs": 299.28,
+          "duration": 93.221,
+          "startTime": 1793370270.786,
+          "endTime": 1793370364.007,
+          "src": "fd5d:d50a:8c17:2110::87e:10018",
+          "dst": "fd5d:d50a:8c17:2110::547:10314",
+          "direction": "inbound",
+          "mos": 4.319,
+          "rFactor": 89.2,
+          "pcmSha256": "cdf6ac6bc026d97f3cd0b065dad9cb91fa22ac1fa925455ed6a7a6207b713960",
+          "pcmSampleCount": 1491840,
+          "sampleRate": 16000,
+          "wavSha256": "72e3eaf6943834b44276c81ff2525171f0d5900a10f07865120602e166748b79",
+          "snrDb": 112.7,
+          "noiseFloorDbfs": -131.8
+        },
+        {
+          "ssrc": 1773200902,
+          "payloadType": 105,
+          "codec": "EVS-HF",
+          "packetCount": 517,
+          "lossCount": 0,
+          "lossPercent": 0,
+          "jitterUs": 20000.06,
+          "duration": 10.32,
+          "startTime": 1793370258.096,
+          "endTime": 1793370268.416,
+          "src": "fd5d:d50a:8c17:2110::547:9290",
+          "dst": "fd5d:d50a:8c17:2110::87e:10012",
+          "direction": "outbound",
+          "mos": 1.068,
+          "rFactor": 12.15,
+          "pcmSha256": "e71414c2c8fbd854adc562570253b725f8450597f90b72aac235bd965f995bfa",
+          "pcmSampleCount": 82720,
+          "sampleRate": 8000,
+          "wavSha256": "b5bfbf5bfa88f93a94ee756fe7349371c752967fd1ba37375d0905a10413c90d",
+          "snrDb": null,
+          "noiseFloorDbfs": null
+        },
+        {
+          "ssrc": 1805029197,
+          "payloadType": 0,
+          "codec": "PCMU",
+          "packetCount": 4275,
+          "lossCount": 0,
+          "lossPercent": 0,
+          "jitterUs": 99.25,
+          "duration": 85.48,
+          "startTime": 1793370270.657,
+          "endTime": 1793370356.138,
+          "src": "fd5d:d50a:8c17:2110::87e:10006",
+          "dst": "fd5d:d50a:8c17:2110::547:8332",
+          "direction": "inbound",
+          "mos": 4.409,
+          "rFactor": 93.2,
+          "pcmSha256": "bbb388ebb3df31f18581a2bbfb6a1c80254c09d609c8569a700f32e492fd009d",
+          "pcmSampleCount": 684000,
+          "sampleRate": 8000,
+          "wavSha256": "725a2e9ae24b58ad10c6d4c5695dbd826df290cfaada2d2e7844632651ebf1a6",
+          "snrDb": 106.4,
+          "noiseFloorDbfs": -140
+        },
+        {
+          "ssrc": 1916911378,
+          "payloadType": 0,
+          "codec": "PCMU",
+          "packetCount": 2435,
+          "lossCount": 0,
+          "lossPercent": 0,
+          "jitterUs": 186.25,
+          "duration": 80.315,
+          "startTime": 1793370270.862,
+          "endTime": 1793370351.177,
+          "src": "fd5d:d50a:8c17:2110::547:8332",
+          "dst": "fd5d:d50a:8c17:2110::87e:10006",
+          "direction": "outbound",
+          "mos": 4.409,
+          "rFactor": 93.2,
+          "pcmSha256": "e119835ee8bfaf1aa36aff0bf87044598801733fef18b1e671fb9909536f447b",
+          "pcmSampleCount": 642680,
+          "sampleRate": 8000,
+          "wavSha256": "f68da04c27d774615a6bdb64d516c91d5ebed8a515aace197e1122e4c07a9beb",
+          "snrDb": 63.2,
+          "noiseFloorDbfs": -83.8
+        },
+        {
+          "ssrc": 2056715541,
+          "payloadType": 105,
+          "codec": "EVS-HF",
+          "packetCount": 4667,
+          "lossCount": 0,
+          "lossPercent": 0,
+          "jitterUs": 8.25,
+          "duration": 93.32,
+          "startTime": 1793370270.676,
+          "endTime": 1793370363.996,
+          "src": "fd5d:d50a:8c17:2110::547:9292",
+          "dst": "fd5d:d50a:8c17:2110::87e:10012",
+          "direction": "outbound",
+          "mos": 4.319,
+          "rFactor": 89.2,
+          "pcmSha256": "f25d4183209ba2d450928c19e209bedbff5a8723462375c9b6e04df1cdd1aaa6",
+          "pcmSampleCount": 746720,
+          "sampleRate": 8000,
+          "wavSha256": "36eb1a6ab328820d61d6f210d103211b73af9cc2be15d35f080f12869eee73d1",
+          "snrDb": 58,
+          "noiseFloorDbfs": -81.2
+        }
+      ]
+    }
+  },
+  "syntheticVideo": {
+    "nalCount": 3,
+    "annexBSha256": "2f5b4cc420d22314dea6182bc260a0ae924ce5ff32ed83dacdb5b59aea7bb016",
+    "mp4Sha256": "a0e8bcd1633b7f0a0a6385a6ca368f0428015921ae333b530770cb35db64ce26"
+  }
+}
