@@ -11,11 +11,14 @@ import { MosUiController } from './mos/MosUiController.ts';
 import { DnsmosUiController } from './dnsmos/DnsmosUiController.ts';
 import { DnsmosToolController } from './dnsmos/DnsmosToolController.ts';
 import { VideoDecoderPlayer } from './video/VideoDecoderPlayer.ts';
+import { SrtpUiController } from './srtp/SrtpUiController.ts';
+import { SrtpKeyRegistry } from './srtp/SrtpKeyRegistry.ts';
 import type { RtpStream } from './rtp/RtpDemuxer.ts';
 
 // State
 let pipelineResult: PipelineResult | null = null;
 let currentPcapBytes: Uint8Array | null = null;
+let currentPcapFile: File | null = null;
 let activeStream: RtpStream | null = null;
 let activePcm16: Int16Array | null = null;
 let activeSampleRate: number = 8000;
@@ -127,6 +130,18 @@ SnrUiController.init();
 MosUiController.initialize(() => renderLadder());
 DnsmosUiController.init();
 const dnsmosToolController = new DnsmosToolController();
+
+// Initialize SRTP / DTLS Key Management & Selective Decryption UI Controller
+const srtpUiController = new SrtpUiController(new SrtpKeyRegistry(), {
+  onStreamsUpdated: () => {
+    renderRtpTable();
+    loadMultiTrackSession();
+  },
+  onRefreshLadder: () => {
+    renderLadder();
+  },
+});
+srtpUiController.bindDomEvents();
 
 // Sub-Tab Switching for Audio Quality Analysis: Estimated MOS (E-model) vs SNR Analysis vs DNSMOS (estimated)
 const btnTabMos = document.getElementById('btn-tab-mos');
@@ -286,6 +301,7 @@ dropzone.addEventListener('drop', (e) => {
 });
 
 async function handleFile(file: File) {
+  currentPcapFile = file;
   const arrayBuffer = await file.arrayBuffer();
   currentPcapBytes = new Uint8Array(arrayBuffer);
   runAnalysis();
@@ -300,6 +316,7 @@ function runAnalysis(pinnedMsIp?: string) {
   multiTrackPlayer.pause();
 
   pipelineResult = CapturePipeline.process(currentPcapBytes, pinnedMsIp);
+  srtpUiController.setCaptureState(pipelineResult, currentPcapFile || currentPcapBytes);
 
   // Switch UI to dashboard
   dropzoneArea.style.display = 'none';
@@ -693,8 +710,12 @@ function renderRtpTable() {
       ? `<span class="badge-inbound-compact" title="Inbound (Client &rarr; Media Server)">IN</span>`
       : `<span class="badge-outbound-compact" title="Outbound (Media Server &rarr; Client)">OUT</span>`;
 
+    const ssrcDisplay = s.isEncrypted
+      ? `<span style="cursor: help;" title="${s.isDecrypted ? `SRTP Decrypted: ${s.cryptoSuite || 'AES_CM_128_HMAC_SHA1_80'}` : 'SRTP Encrypted (Key Missing)'}">${s.isDecrypted ? '🔒' : '🔒❌'}</span> ${s.ssrc}`
+      : String(s.ssrc);
+
     tr.innerHTML = `
-      <td style="font-weight: 600; font-family: monospace; font-size: 11px;">${s.ssrc}</td>
+      <td style="font-weight: 600; font-family: monospace; font-size: 11px;">${ssrcDisplay}</td>
       <td><span class="pill ${codecClass}">${info.name} (PT ${s.payloadType})</span></td>
       <td>${dirBadge}</td>
       <td style="font-size: 11px; font-family: monospace;">${s.srcIp}:${s.srcPort}</td>

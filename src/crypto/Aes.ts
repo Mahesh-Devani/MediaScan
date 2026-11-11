@@ -250,4 +250,186 @@ export class Aes {
       data[dataOffset + i] ^= keystream[i];
     }
   }
+
+  /**
+   * GF(2^128) field multiplication for GHASH (NIST SP 800-38D Algorithm 1).
+   * Reducing polynomial: x^128 + x^7 + x^2 + x + 1 (R = 0xe1000000...)
+   */
+  public static ghashMul(xBytes: Uint8Array, yBytes: Uint8Array): Uint8Array {
+    let z0 = 0, z1 = 0, z2 = 0, z3 = 0;
+    const yv = new DataView(yBytes.buffer, yBytes.byteOffset, 16);
+    let v0 = yv.getUint32(0, false);
+    let v1 = yv.getUint32(4, false);
+    let v2 = yv.getUint32(8, false);
+    let v3 = yv.getUint32(12, false);
+
+    for (let i = 0; i < 16; i++) {
+      const b = xBytes[i];
+      for (let bit = 7; bit >= 0; bit--) {
+        if ((b & (1 << bit)) !== 0) {
+          z0 ^= v0; z1 ^= v1; z2 ^= v2; z3 ^= v3;
+        }
+        const lsb = (v3 & 1) !== 0;
+        v3 = ((v3 >>> 1) | ((v2 & 1) << 31)) >>> 0;
+        v2 = ((v2 >>> 1) | ((v1 & 1) << 31)) >>> 0;
+        v1 = ((v1 >>> 1) | ((v0 & 1) << 31)) >>> 0;
+        v0 = (v0 >>> 1) >>> 0;
+        if (lsb) {
+          v0 = (v0 ^ 0xe1000000) >>> 0;
+        }
+      }
+    }
+
+    const out = new Uint8Array(16);
+    const ov = new DataView(out.buffer);
+    ov.setUint32(0, z0 >>> 0, false);
+    ov.setUint32(4, z1 >>> 0, false);
+    ov.setUint32(8, z2 >>> 0, false);
+    ov.setUint32(12, z3 >>> 0, false);
+    return out;
+  }
+
+  /**
+   * Computes GHASH over AAD and ciphertext blocks (NIST SP 800-38D Section 6.4).
+   */
+  public static ghash(H: Uint8Array, aad: Uint8Array, ciphertext: Uint8Array): Uint8Array {
+    let y = new Uint8Array(16);
+
+    const processBlock = (block: Uint8Array) => {
+      for (let i = 0; i < 16; i++) y[i] ^= block[i];
+      y = Aes.ghashMul(y, H);
+    };
+
+    // 1. Process AAD blocks (16-byte padded)
+    for (let offset = 0; offset < aad.length; offset += 16) {
+      const blk = new Uint8Array(16);
+      const slice = aad.subarray(offset, Math.min(offset + 16, aad.length));
+      blk.set(slice);
+      processBlock(blk);
+    }
+
+    // 2. Process Ciphertext blocks (16-byte padded)
+    for (let offset = 0; offset < ciphertext.length; offset += 16) {
+      const blk = new Uint8Array(16);
+      const slice = ciphertext.subarray(offset, Math.min(offset + 16, ciphertext.length));
+      blk.set(slice);
+      processBlock(blk);
+    }
+
+    // 3. Process 16-byte length block [len(A) in bits (64-bit BE) || len(C) in bits (64-bit BE)]
+    const lenBlock = new Uint8Array(16);
+    const lv = new DataView(lenBlock.buffer);
+    const aadBits = aad.length * 8;
+    const ctBits = ciphertext.length * 8;
+    lv.setUint32(0, Math.floor(aadBits / 0x100000000), false);
+    lv.setUint32(4, aadBits >>> 0, false);
+    lv.setUint32(8, Math.floor(ctBits / 0x100000000), false);
+    lv.setUint32(12, ctBits >>> 0, false);
+    processBlock(lenBlock);
+
+    return y;
+  }
+
+  /**
+   * Computes the 16-byte hash subkey H = AES_K(0^128).
+   */
+  public getHashSubkey(): Uint8Array {
+    const H = new Uint8Array(16);
+    this.encryptBlock(new Uint8Array(16), 0, H, 0);
+    return H;
+  }
+
+  /**
+   * Encrypts data and computes GMAC authentication tag using AES-GCM (NIST SP 800-38D / RFC 7714).
+   * For 12-byte IV:
+   * J0 = IV || 0x00000001, K0 = AES(J0).
+   * Keystream counter starts at J1 = IV || 0x00000002.
+   * Tag = GHASH(H, aad, ct) XOR K0.
+   */
+  public encryptGcm(
+    iv: Uint8Array,
+    plaintext: Uint8Array,
+    aad: Uint8Array = new Uint8Array(0),
+    tagLength: number = 16
+  ): { ciphertext: Uint8Array; tag: Uint8Array } {
+    if (iv.length !== 12) {
+      throw new Error(`AES-GCM requires 12-byte (96-bit) IV, got ${iv.length} bytes`);
+    }
+
+    const H = this.getHashSubkey();
+
+    // J0 = IV || 0x00000001
+    const j0 = new Uint8Array(16);
+    j0.set(iv, 0);
+    j0[15] = 1;
+
+    // K0 = AES_K(J0)
+    const k0 = new Uint8Array(16);
+    this.encryptBlock(j0, 0, k0, 0);
+
+    // Encrypt plaintext with counter starting at J1 (IV || 0x00000002)
+    const j1 = new Uint8Array(16);
+    j1.set(iv, 0);
+    j1[15] = 2;
+
+    const ciphertext = new Uint8Array(plaintext);
+    this.processCtr(j1, ciphertext);
+
+    // Compute tag: GHASH(H, aad, ct) XOR K0
+    const ghashOut = Aes.ghash(H, aad, ciphertext);
+    const tag = new Uint8Array(tagLength);
+    for (let i = 0; i < tagLength; i++) {
+      tag[i] = ghashOut[i] ^ k0[i];
+    }
+
+    return { ciphertext, tag };
+  }
+
+  /**
+   * Decrypts ciphertext and verifies GMAC authentication tag using AES-GCM.
+   */
+  public decryptGcm(
+    iv: Uint8Array,
+    ciphertext: Uint8Array,
+    tag: Uint8Array,
+    aad: Uint8Array = new Uint8Array(0)
+  ): { plaintext: Uint8Array; authValid: boolean } {
+    if (iv.length !== 12) {
+      throw new Error(`AES-GCM requires 12-byte (96-bit) IV, got ${iv.length} bytes`);
+    }
+
+    const H = this.getHashSubkey();
+
+    // J0 = IV || 0x00000001
+    const j0 = new Uint8Array(16);
+    j0.set(iv, 0);
+    j0[15] = 1;
+
+    // K0 = AES_K(J0)
+    const k0 = new Uint8Array(16);
+    this.encryptBlock(j0, 0, k0, 0);
+
+    // Verify tag
+    const ghashOut = Aes.ghash(H, aad, ciphertext);
+    const expectedTag = new Uint8Array(tag.length);
+    for (let i = 0; i < tag.length; i++) {
+      expectedTag[i] = ghashOut[i] ^ k0[i];
+    }
+
+    let diff = 0;
+    for (let i = 0; i < tag.length; i++) {
+      diff |= expectedTag[i] ^ tag[i];
+    }
+    const authValid = diff === 0;
+
+    // Decrypt ciphertext with counter starting at J1 (IV || 0x00000002)
+    const j1 = new Uint8Array(16);
+    j1.set(iv, 0);
+    j1[15] = 2;
+
+    const plaintext = new Uint8Array(ciphertext);
+    this.processCtr(j1, plaintext);
+
+    return { plaintext, authValid };
+  }
 }

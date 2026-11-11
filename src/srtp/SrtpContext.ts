@@ -28,25 +28,37 @@ export class SrtpContext {
   private ksRtcp: Uint8Array;
 
   private tagLength: number;
+  private isGcm: boolean = false;
   private streamStates = new Map<number, SrtpStreamState>();
 
   constructor(crypto: SdesCrypto) {
     this.crypto = crypto;
     const { keyLen, tagLen } = SdesParser.getKeyLengths(crypto.cryptoSuite);
     this.tagLength = tagLen;
+    this.isGcm = crypto.cryptoSuite.startsWith('AEAD_');
 
-    // 1. Derive SRTP session keys
-    const masterCipher = new Aes(crypto.masterKey);
-    const ke = masterCipher.deriveSrtpKey(crypto.masterSalt, 0x00, 0, keyLen);
-    this.cipherKe = new Aes(ke);
-    this.ka = masterCipher.deriveSrtpKey(crypto.masterSalt, 0x01, 0, 20); // 160-bit auth key
-    this.ks = masterCipher.deriveSrtpKey(crypto.masterSalt, 0x02, 0, 14); // 112-bit salt
+    if (this.isGcm) {
+      // For AEAD AES-GCM suites (RFC 7714), key and salt are used directly with integrated GMAC
+      this.cipherKe = new Aes(crypto.masterKey);
+      this.ka = new Uint8Array(0);
+      this.ks = crypto.masterSalt;
+      this.cipherKeRtcp = new Aes(crypto.masterKey);
+      this.kaRtcp = new Uint8Array(0);
+      this.ksRtcp = crypto.masterSalt;
+    } else {
+      // 1. Derive SRTP session keys
+      const masterCipher = new Aes(crypto.masterKey);
+      const ke = masterCipher.deriveSrtpKey(crypto.masterSalt, 0x00, 0, keyLen);
+      this.cipherKe = new Aes(ke);
+      this.ka = masterCipher.deriveSrtpKey(crypto.masterSalt, 0x01, 0, 20); // 160-bit auth key
+      this.ks = masterCipher.deriveSrtpKey(crypto.masterSalt, 0x02, 0, 14); // 112-bit salt
 
-    // 2. Derive SRTCP session keys (labels 0x03, 0x04, 0x05)
-    const keRtcp = masterCipher.deriveSrtpKey(crypto.masterSalt, 0x03, 0, keyLen);
-    this.cipherKeRtcp = new Aes(keRtcp);
-    this.kaRtcp = masterCipher.deriveSrtpKey(crypto.masterSalt, 0x04, 0, 20);
-    this.ksRtcp = masterCipher.deriveSrtpKey(crypto.masterSalt, 0x05, 0, 14);
+      // 2. Derive SRTCP session keys (labels 0x03, 0x04, 0x05)
+      const keRtcp = masterCipher.deriveSrtpKey(crypto.masterSalt, 0x03, 0, keyLen);
+      this.cipherKeRtcp = new Aes(keRtcp);
+      this.kaRtcp = masterCipher.deriveSrtpKey(crypto.masterSalt, 0x04, 0, 20);
+      this.ksRtcp = masterCipher.deriveSrtpKey(crypto.masterSalt, 0x05, 0, 14);
+    }
   }
 
   /**
@@ -236,6 +248,53 @@ export class SrtpContext {
     const authPortionLen = packetBytes.length - trailerLen;
     const tagOffset = packetBytes.length - tagLen;
 
+    if (this.isGcm) {
+      // RFC 7714 AES-GCM SRTP
+      const iv = new Uint8Array(12);
+      iv.set(this.ks.subarray(0, 12), 0);
+      iv[2] ^= ((ssrc >>> 24) & 0xff);
+      iv[3] ^= ((ssrc >>> 16) & 0xff);
+      iv[4] ^= ((ssrc >>> 8) & 0xff);
+      iv[5] ^= (ssrc & 0xff);
+      iv[6] ^= ((roc >>> 24) & 0xff);
+      iv[7] ^= ((roc >>> 16) & 0xff);
+      iv[8] ^= ((roc >>> 8) & 0xff);
+      iv[9] ^= (roc & 0xff);
+      iv[10] ^= ((seq >>> 8) & 0xff);
+      iv[11] ^= (seq & 0xff);
+
+      const aad = packetBytes.subarray(0, headerLen);
+      const ciphertext = packetBytes.subarray(headerLen, packetBytes.length - trailerLen);
+      const tag = packetBytes.subarray(tagOffset, tagOffset + tagLen);
+
+      const { plaintext, authValid } = this.cipherKe.decryptGcm(iv, ciphertext, tag, aad);
+
+      if (authValid) {
+        state.authPassCount++;
+      } else {
+        state.authFailCount++;
+      }
+
+      const outPacket = new Uint8Array(headerLen + plaintext.length);
+      outPacket.set(packetBytes.subarray(0, headerLen), 0);
+      outPacket.set(plaintext, headerLen);
+
+      let finalPacket = outPacket;
+      if (hasPadding && plaintext.length > 0) {
+        const padCount = outPacket[outPacket.length - 1];
+        if (padCount > 0 && padCount <= plaintext.length) {
+          finalPacket = outPacket.subarray(0, outPacket.length - padCount);
+        }
+      }
+
+      return {
+        decryptedPacket: finalPacket,
+        authValid,
+        roc,
+        packetIndex,
+      };
+    }
+
     const authValid = tagLen > 0
       ? this.verifyAuthTag(packetBytes, authPortionLen, tagOffset, roc, false)
       : true;
@@ -285,8 +344,8 @@ export class SrtpContext {
     authValid: boolean;
     srtcpIndex: number;
   } {
-    const tagLen = 10; // Mandatory 80-bit tag for SRTCP (RFC 3711 Section 4.3.3.2)
-    const minLen = 8 + 4 + tagLen; // Header (8) + Index/E (4) + Tag (10)
+    const tagLen = this.isGcm ? 16 : 10; // 16 bytes for GCM AEAD (RFC 7714), 10 bytes for HMAC-SHA1-80 (RFC 3711)
+    const minLen = 8 + 4 + tagLen; // Header (8) + Index/E (4) + Tag
     if (packetBytes.length < minLen) {
       throw new Error(`Packet too short for SRTCP: ${packetBytes.length} < ${minLen}`);
     }
@@ -300,6 +359,39 @@ export class SrtpContext {
     const indexWord = view.getUint32(indexOffset, false);
     const isEncrypted = (indexWord & 0x80000000) !== 0;
     const srtcpIndex = indexWord & 0x7fffffff;
+
+    if (this.isGcm) {
+      // RFC 7714 Section 9 SRTCP GCM
+      const iv = new Uint8Array(12);
+      iv.set(this.ksRtcp.subarray(0, 12), 0);
+      iv[2] ^= ((ssrc >>> 24) & 0xff);
+      iv[3] ^= ((ssrc >>> 16) & 0xff);
+      iv[4] ^= ((ssrc >>> 8) & 0xff);
+      iv[5] ^= (ssrc & 0xff);
+      iv[8] ^= ((srtcpIndex >>> 24) & 0xff);
+      iv[9] ^= ((srtcpIndex >>> 16) & 0xff);
+      iv[10] ^= ((srtcpIndex >>> 8) & 0xff);
+      iv[11] ^= (srtcpIndex & 0xff);
+
+      const aad = new Uint8Array(12);
+      aad.set(packetBytes.subarray(0, 8), 0);
+      aad.set(packetBytes.subarray(indexOffset, indexOffset + 4), 8);
+
+      const ciphertext = packetBytes.subarray(8, indexOffset);
+      const tag = packetBytes.subarray(tagOffset, tagOffset + 16);
+
+      const { plaintext, authValid } = this.cipherKeRtcp.decryptGcm(iv, ciphertext, tag, aad);
+
+      const outPacket = new Uint8Array(8 + plaintext.length);
+      outPacket.set(packetBytes.subarray(0, 8), 0);
+      outPacket.set(plaintext, 8);
+
+      return {
+        decryptedPacket: outPacket,
+        authValid,
+        srtcpIndex,
+      };
+    }
 
     // Verify auth tag over packet[0..indexOffset + 4]
     const authValid = this.verifyAuthTag(packetBytes, indexOffset + 4, tagOffset, 0, true);

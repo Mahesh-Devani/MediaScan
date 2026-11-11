@@ -22,6 +22,27 @@ function base64ToBytes(b64: string): Uint8Array {
 
 export class SdesParser {
   /**
+   * Encodes bytes into standard Base64 string.
+   */
+  public static base64Encode(bytes: Uint8Array): string {
+    if (typeof Buffer !== 'undefined') {
+      return Buffer.from(bytes.buffer, bytes.byteOffset, bytes.byteLength).toString('base64');
+    }
+    let binary = '';
+    for (let i = 0; i < bytes.length; i++) {
+      binary += String.fromCharCode(bytes[i]);
+    }
+    return btoa(binary);
+  }
+
+  /**
+   * Decodes Base64 string into bytes.
+   */
+  public static base64Decode(b64: string): Uint8Array {
+    return base64ToBytes(b64);
+  }
+
+  /**
    * Returns expected master key length and salt length in bytes for a given crypto suite.
    */
   public static getKeyLengths(suite: SrtpCryptoSuite): { keyLen: number; saltLen: number; tagLen: number } {

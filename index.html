@@ -25,6 +25,9 @@
         <span>Media Server IP:</span>
         <select id="ms-select"></select>
       </div>
+      <button class="btn btn-ctrl-sec" id="btn-open-keys" style="display: flex; align-items: center; gap: 6px; padding: 6px 14px; font-size: 13px; font-weight: 600;" title="Manage SRTP/DTLS decryption keys, import product logs, or enter manual keys">
+        🔑 Keys <span id="keys-count-pill" class="badge-tag" style="display: none; background: #9ece6a; color: #1a1b26; font-size: 11px; padding: 1px 6px; font-weight: 700;">0</span>
+      </button>
       <button class="btn btn-primary" id="btn-open-file">Open PCAP / PCAPNG</button>
       <input type="file" id="file-input" accept=".pcap,.pcapng,.cap" style="display: none;">
     </div>
@@ -1183,6 +1186,152 @@
       <div style="padding: 10px 18px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 10px; background: rgba(0,0,0,0.15);">
         <button class="btn btn-sm" onclick="document.getElementById('modal-raw-stream-config').style.display='none'">Cancel</button>
         <button class="btn btn-sm btn-primary" id="btn-apply-raw-config">Select File &amp; Import</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Dialog: SRTP / DTLS Key Management -->
+  <div class="modal-overlay" id="srtp-keys-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.7); z-index: 10000; align-items: center; justify-content: center;">
+    <div style="background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 8px; width: 750px; max-width: 95vw; max-height: 85vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 12px 36px rgba(0,0,0,0.6);">
+      <!-- Header -->
+      <div style="padding: 14px 18px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="font-weight: 700; font-size: 15px; color: #fff;">🔑 SRTP &amp; DTLS Decryption Keys</span>
+          <span class="badge-tag" style="background: rgba(158, 206, 106, 0.2); color: #9ece6a; border: 1px solid #9ece6a; font-size: 10px;">Volatile RAM Only</span>
+        </div>
+        <button class="btn btn-sm" id="btn-close-srtp-modal" style="padding: 3px 8px;">✕</button>
+      </div>
+
+      <!-- Tabs Navigation -->
+      <div style="display: flex; gap: 8px; padding: 10px 18px; border-bottom: 1px solid var(--border); background: var(--bg-tertiary);">
+        <button class="btn btn-sm btn-ctrl-sec active" id="btn-srtp-tab-manual">Manual Key Entry</button>
+        <button class="btn btn-sm btn-ctrl-sec" id="btn-srtp-tab-import">Import Logs &amp; Secrets</button>
+        <button class="btn btn-sm btn-ctrl-sec" id="btn-srtp-tab-active">Active Keys &amp; Security</button>
+      </div>
+
+      <!-- Tab Content Area -->
+      <div style="padding: 16px 20px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 14px; font-size: 13px;">
+
+        <!-- Pane 1: Manual Key Entry -->
+        <div id="srtp-pane-manual" style="display: block;">
+          <div style="display: flex; flex-direction: column; gap: 12px;">
+            <div style="display: flex; flex-direction: column; gap: 4px;">
+              <label style="font-weight: 600; color: var(--text-dim);">Master Key &amp; Salt / SDP Crypto Line:</label>
+              <textarea id="srtp-input-key" placeholder="Paste 40-character Base64 inline key, a=crypto: line, or 60-character Hex string..." style="width: 100%; height: 75px; background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; color: #fff; font-family: monospace; font-size: 12px; resize: vertical;"></textarea>
+              <span style="font-size: 11px; color: var(--text-dim);">Accepts standard SDES <code>inline:W3UZ...</code> (30 bytes raw), full <code>a=crypto:1 AES_CM_128...</code> lines, or separated Hex.</span>
+            </div>
+
+            <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+              <div style="flex: 1; min-width: 220px; display: flex; flex-direction: column; gap: 4px;">
+                <label style="font-size: 11px; color: var(--text-dim); font-weight: 600;">Crypto Suite:</label>
+                <select id="srtp-suite-select" class="mt-select">
+                  <option value="AES_CM_128_HMAC_SHA1_80" selected>AES_CM_128_HMAC_SHA1_80 (RFC 4568 / 3711)</option>
+                  <option value="AES_CM_128_HMAC_SHA1_32">AES_CM_128_HMAC_SHA1_32 (RFC 4568)</option>
+                  <option value="AEAD_AES_128_GCM">AEAD_AES_128_GCM (RFC 7714)</option>
+                  <option value="AEAD_AES_256_GCM">AEAD_AES_256_GCM (RFC 7714)</option>
+                  <option value="AES_256_CM_HMAC_SHA1_80">AES_256_CM_HMAC_SHA1_80 (RFC 6188)</option>
+                </select>
+              </div>
+
+              <div style="flex: 1; min-width: 220px; display: flex; flex-direction: column; gap: 4px;">
+                <label style="font-size: 11px; color: var(--text-dim); font-weight: 600;">Target Stream / Endpoint:</label>
+                <select id="srtp-target-select" class="mt-select"></select>
+              </div>
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; margin-top: 6px;">
+              <button class="btn btn-primary" id="btn-add-manual-key" style="padding: 7px 18px;">
+                🔓 Add Key &amp; Re-decrypt
+              </button>
+            </div>
+            <div id="srtp-manual-msg" style="display: none; padding: 8px 12px; border-radius: 4px; font-size: 12px;"></div>
+          </div>
+        </div>
+
+        <!-- Pane 2: Import Logs & Secrets -->
+        <div id="srtp-pane-import" style="display: none;">
+          <div style="display: flex; flex-direction: column; gap: 12px;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span style="font-weight: 600; color: var(--text-dim);">Paste or Select Log File:</span>
+              <button class="btn btn-sm btn-ctrl-sec" id="btn-select-log-file">📂 Select Log File (.txt, .log, SSLKEYLOGFILE)</button>
+              <input type="file" id="srtp-log-file-input" accept=".txt,.log,.json,.keylog" style="display: none;">
+            </div>
+
+            <textarea id="srtp-log-textarea" placeholder="Paste telecom server logs (FreeSWITCH, Asterisk, Kamailio/RTPEngine, Cisco CUCM, Chrome webrtc_internals_dump.txt, or NSS SSLKEYLOGFILE)..." style="width: 100%; height: 110px; background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; color: #fff; font-family: monospace; font-size: 11px; resize: vertical;"></textarea>
+
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span style="font-size: 11px; color: var(--text-dim);">Parses logs in a Web Worker using customizable regex library.</span>
+              <button class="btn btn-primary" id="btn-scan-logs" style="padding: 6px 16px;">🔍 Scan for Keys</button>
+            </div>
+
+            <div id="srtp-scanned-keys-area" style="display: none; flex-direction: column; gap: 8px;">
+              <div style="font-weight: 600; font-size: 12px; color: #fff; display: flex; justify-content: space-between; align-items: center;">
+                <span id="srtp-scanned-count">Found 0 candidate keys:</span>
+                <button class="btn btn-sm btn-primary" id="btn-import-scanned-keys">Import Selected Keys</button>
+              </div>
+              <div style="max-height: 140px; overflow-y: auto; border: 1px solid var(--border); border-radius: 4px;">
+                <table class="data-table" style="font-size: 11px; margin: 0;">
+                  <thead>
+                    <tr>
+                      <th style="width: 30px;"><input type="checkbox" id="chk-select-all-scanned" checked></th>
+                      <th>Source / Hint</th>
+                      <th>Suite</th>
+                      <th>Key / Secret Preview</th>
+                    </tr>
+                  </thead>
+                  <tbody id="srtp-scanned-tbody"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Pane 3: Active Keys & Security -->
+        <div id="srtp-pane-active" style="display: none;">
+          <div style="display: flex; flex-direction: column; gap: 12px;">
+            <div style="background: rgba(158, 206, 106, 0.1); border: 1px solid rgba(158, 206, 106, 0.3); border-radius: 6px; padding: 10px 14px; font-size: 12px; color: #c0caf5;">
+              <strong style="color: #9ece6a;">🛡️ Privacy &amp; Security Policy:</strong>
+              Keys live exclusively in volatile browser RAM and are NEVER written to disk, <code>localStorage</code>, <code>IndexedDB</code>, cookies, URL, analytics, or external servers. Keys are masked by default. Closing or refreshing the tab clears all keys.
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span style="font-weight: 600; color: #fff;">In-Memory Active Keys:</span>
+              <button class="btn btn-sm" id="btn-clear-all-keys" style="color: #f7768e; border-color: rgba(247, 118, 142, 0.4);">
+                🗑️ Clear All Keys from Memory
+              </button>
+            </div>
+
+            <div style="max-height: 180px; overflow-y: auto; border: 1px solid var(--border); border-radius: 4px;">
+              <table class="data-table" style="font-size: 11px; margin: 0;">
+                <thead>
+                  <tr>
+                    <th>Source</th>
+                    <th>Target</th>
+                    <th>Suite</th>
+                    <th>Key Value (Masked)</th>
+                  </tr>
+                </thead>
+                <tbody id="srtp-active-keys-tbody"></tbody>
+              </table>
+              <div id="srtp-no-keys-msg" style="padding: 16px; text-align: center; color: var(--text-dim); font-size: 12px;">
+                No active decryption keys currently in memory.
+              </div>
+            </div>
+
+            <div style="border-top: 1px solid var(--border); padding-top: 10px; display: flex; justify-content: space-between; align-items: center;">
+              <label style="font-size: 12px; color: var(--text-dim); display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                <input type="checkbox" id="chk-srtp-kill-switch">
+                <span>Emergency Kill Switch (Disable all SRTP/DTLS decryption)</span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Footer -->
+      <div style="padding: 10px 18px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; background: rgba(0,0,0,0.15);">
+        <button class="btn btn-sm btn-primary" id="btn-done-srtp-modal">Done</button>
       </div>
     </div>
   </div>
