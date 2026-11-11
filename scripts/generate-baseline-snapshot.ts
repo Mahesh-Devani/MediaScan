@@ -272,16 +272,18 @@ export async function generateBaseline(): Promise<BaselineSnapshot> {
   };
 }
 
-// Always run if executed directly
-generateBaseline().then(snapshot => {
-  const outDir = path.resolve('test/fixtures/baseline');
-  if (!fs.existsSync(outDir)) {
-    fs.mkdirSync(outDir, { recursive: true });
-  }
-  const outFile = path.join(outDir, 'baseline-snapshot.json');
-  fs.writeFileSync(outFile, JSON.stringify(snapshot, null, 2), 'utf-8');
-  console.log(`Baseline snapshot saved to ${outFile}`);
-}).catch(err => {
-  console.error('Failed to generate baseline snapshot:', err);
-  process.exit(1);
-});
+// Only run and save to disk if executed directly as a standalone script
+if (process.argv[1] && process.argv[1].includes('generate-baseline-snapshot')) {
+  generateBaseline().then(snapshot => {
+    const outDir = path.resolve('test/fixtures/baseline');
+    if (!fs.existsSync(outDir)) {
+      fs.mkdirSync(outDir, { recursive: true });
+    }
+    const outFile = path.join(outDir, 'baseline-snapshot.json');
+    fs.writeFileSync(outFile, JSON.stringify(snapshot, null, 2), 'utf-8');
+    console.log(`Baseline snapshot saved to ${outFile}`);
+  }).catch(err => {
+    console.error('Failed to generate baseline snapshot:', err);
+    process.exit(1);
+  });
+}

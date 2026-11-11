@@ -213,6 +213,26 @@ export class LadderSvgRenderer {
       extraPillOffset += mosPillW + 6;
     }
 
+    // Render SRTP Encryption Lock Badge if stream is encrypted
+    if (s.isEncrypted) {
+      const lockPillX = badgeX + badgeWidth + extraPillOffset;
+      const lockPillW = s.isDecrypted ? 46 : 56;
+      const lockColor = s.isDecrypted ? '#9ece6a' : '#f7768e';
+      const lockBg = s.isDecrypted ? 'rgba(158, 206, 106, 0.2)' : 'rgba(247, 118, 142, 0.2)';
+      const lockText = s.isDecrypted ? '🔒 SRTP' : '🔒 Locked';
+      const authInfo = s.authPassRate !== undefined ? `\nAuth Pass Rate: ${s.authPassRate.toFixed(1)}%` : '';
+      const tooltip = s.isDecrypted
+        ? `SRTP Decrypted: ${s.cryptoSuite || 'AES_CM_128_HMAC_SHA1_80'}${authInfo}`
+        : `SRTP Encrypted (Key Missing or Invalid)`;
+
+      res += `    <g class="ladder-srtp-badge" style="cursor: help;" title="${tooltip}">\n`;
+      res += `      <rect x="${lockPillX}" y="${y - 8}" width="${lockPillW}" height="15" rx="3" fill="#1f2335" stroke="${lockColor}" stroke-width="1.2"/>\n`;
+      res += `      <rect x="${lockPillX}" y="${y - 8}" width="${lockPillW}" height="15" rx="3" fill="${lockBg}"/>\n`;
+      res += `      <text x="${lockPillX + lockPillW / 2}" y="${y + 3}" fill="${lockColor}" font-size="8.5" font-weight="bold" text-anchor="middle">${lockText}</text>\n`;
+      res += `    </g>\n`;
+      extraPillOffset += lockPillW + 6;
+    }
+
     // Render RFC 4733 DTMF Keypad Pills along the stream arrow if enabled
     if (showDtmf && s.telephoneEvents && s.telephoneEvents.length > 0) {
       const uniqueEvents: Array<{ digit: string; time: number }> = [];

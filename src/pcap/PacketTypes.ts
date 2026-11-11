@@ -37,6 +37,7 @@ export interface CapturedPacket {
   capturedLength: number;
   originalLength: number;
   data: Uint8Array;
+  fileOffset?: number;
 }
 
 export interface NetworkHeader {

@@ -193,7 +193,10 @@ export class LegBuilder {
       startTime: s.startTime,
       endTime: s.endTime,
       duration: Math.max(0, s.endTime - s.startTime),
-      isEncrypted: false,
+      isEncrypted: !!s.isEncrypted,
+      isDecrypted: s.isDecrypted,
+      cryptoSuite: s.cryptoSuite,
+      authPassRate: s.authPassRate,
       hasSilenceStuffing: false,
       telephoneEvents: s.telephoneEvents,
     };

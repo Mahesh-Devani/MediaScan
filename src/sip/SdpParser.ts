@@ -1,3 +1,6 @@
+import { SdesParser } from '../srtp/SdesParser.ts';
+import type { SdesCrypto } from '../srtp/SrtpTypes.ts';
+
 export interface SdpOrigin {
   username: string;
   sessId: string;
@@ -31,6 +34,8 @@ export interface SdpMedia {
   maxptime?: number;
   rtpmap: Map<number, SdpCodec>;
   fmtp: Map<number, string>;
+  isSecure?: boolean;
+  crypto?: SdesCrypto[];
 }
 
 export interface SdpSession {
@@ -113,6 +118,7 @@ export class SdpParser {
             const protocol = parts[2];
             const formats = parts.slice(3).map(p => parseInt(p, 10)).filter(p => !isNaN(p));
 
+            const isSecure = protocol.includes('SAVP') || protocol.includes('SAVPF');
             currentMedia = {
               type: mediaType,
               port,
@@ -121,6 +127,8 @@ export class SdpParser {
               direction: sessionDirection,
               rtpmap: new Map<number, SdpCodec>(),
               fmtp: new Map<number, string>(),
+              isSecure,
+              crypto: [],
             };
 
             // Populate known static payload types
@@ -171,6 +179,13 @@ export class SdpParser {
             currentMedia.ptime = parseInt(val.substring(6).trim(), 10);
           } else if (val.startsWith('maxptime:')) {
             currentMedia.maxptime = parseInt(val.substring(9).trim(), 10);
+          } else if (val.startsWith('crypto:')) {
+            const cryptoObj = SdesParser.parseCryptoLine(val);
+            if (cryptoObj) {
+              currentMedia.isSecure = true;
+              if (!currentMedia.crypto) currentMedia.crypto = [];
+              currentMedia.crypto.push(cryptoObj);
+            }
           }
           break;
         }

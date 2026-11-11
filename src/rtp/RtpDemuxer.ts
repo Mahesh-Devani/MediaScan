@@ -56,6 +56,11 @@ export interface RtpStream {
   telephoneEvents: Array<{ event: number; time: number; duration: number }>;
   rtcpRttMs?: number;
   rtcpXrMetrics?: any;
+  isEncrypted?: boolean;
+  isDecrypted?: boolean;
+  cryptoSuite?: string;
+  authPassRate?: number;
+  encryptedPacketIndex?: Array<{ offset: number; length: number; timestampSec: number }>;
 }
 
 export class RtpDemuxer {

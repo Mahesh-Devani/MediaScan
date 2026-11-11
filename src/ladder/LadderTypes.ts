@@ -20,6 +20,9 @@ export interface StreamSummary {
   endTime: number;
   duration: number;
   isEncrypted: boolean;
+  isDecrypted?: boolean;
+  cryptoSuite?: string;
+  authPassRate?: number;
   hasSilenceStuffing: boolean;
   telephoneEvents: Array<{ event: number; time: number; duration: number }>;
   mos?: number;

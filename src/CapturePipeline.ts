@@ -9,6 +9,7 @@ import { ConversationGrouper } from './ladder/ConversationGrouper.ts';
 import { AnomalyDetector } from './ladder/AnomalyDetector.ts';
 import { MosEngine } from './mos/MosEngine.ts';
 import { StreamAudioDecoder } from './decoders/StreamAudioDecoder.ts';
+import { SrtpKeyRegistry } from './srtp/SrtpKeyRegistry.ts';
 import type { Conversation, Leg, MediaServer } from './ladder/LadderTypes.ts';
 import type { RtpStream } from './rtp/RtpDemuxer.ts';
 import type { SipDialog } from './sip/DialogManager.ts';
@@ -19,6 +20,7 @@ export interface PipelineResult {
   mediaServer: MediaServer | null;
   legs: Leg[];
   conversations: Conversation[];
+  keyRegistry?: SrtpKeyRegistry;
   stats: {
     totalFrames: number;
     sipPackets: number;
@@ -37,6 +39,9 @@ export class CapturePipeline {
     const dialogManager = new DialogManager();
     const rtpDemuxer = new RtpDemuxer();
     const msDetector = new MediaServerDetector();
+    const keyRegistry = new SrtpKeyRegistry();
+    const secureEndpoints = new Set<string>();
+
     if (userPinnedMsIp) {
       msDetector.setUserPinnedIp(userPinnedMsIp);
     }
@@ -83,6 +88,9 @@ export class CapturePipeline {
                 if (epIp && m.port > 0) {
                   const isAnswer = !sipMsg.isRequest && (sipMsg.statusCode || 0) >= 200 && (sipMsg.statusCode || 0) < 300;
                   msDetector.registerEndpoint(epIp, m.port, isAnswer);
+                  if (m.isSecure || (m.crypto && m.crypto.length > 0)) {
+                    secureEndpoints.add(`${epIp}:${m.port}`);
+                  }
                 }
 
                 // Register dynamic payload types with clock rates and detect telephone-event
@@ -93,6 +101,12 @@ export class CapturePipeline {
                   }
                 }
               }
+
+              // Update key registry with dialog offer/answers
+              const activeDialogs = dialogManager.getMediaDialogs();
+              for (const d of activeDialogs) {
+                keyRegistry.registerSipDialog(d);
+              }
             }
           }
         }
@@ -102,13 +116,73 @@ export class CapturePipeline {
         if (rtp) {
           rtpPackets++;
           msDetector.registerEndpoint(dstIp, dstPort, false);
-          rtpDemuxer.addPacket(rtp, pkt.timestampSec, srcIp, srcPort, dstIp, dstPort);
+
+          const isSecure = secureEndpoints.has(`${dstIp}:${dstPort}`) || secureEndpoints.has(`${srcIp}:${srcPort}`);
+          const srtpCtx = keyRegistry.getContextForPacket(rtp.ssrc, srcIp, srcPort, dstIp, dstPort, pkt.timestampSec);
+
+          if (srtpCtx) {
+            try {
+              const unprotectRes = srtpCtx.unprotectRtp(payload);
+              const parsedDecrypted = RtpDemuxer.parseRtp(unprotectRes.decryptedPacket);
+              if (parsedDecrypted) {
+                rtp.payload = parsedDecrypted.payload;
+              }
+              const stream = rtpDemuxer.addPacket(rtp, pkt.timestampSec, srcIp, srcPort, dstIp, dstPort);
+              stream.isEncrypted = true;
+              stream.isDecrypted = true;
+              stream.cryptoSuite = (srtpCtx as any).crypto?.cryptoSuite;
+              stream.authPassRate = srtpCtx.getAuthPassRate(rtp.ssrc);
+              if (!stream.encryptedPacketIndex) stream.encryptedPacketIndex = [];
+              stream.encryptedPacketIndex.push({
+                offset: pkt.fileOffset || 0,
+                length: pkt.data.length,
+                timestampSec: pkt.timestampSec,
+              });
+            } catch (err) {
+              const stream = rtpDemuxer.addPacket(rtp, pkt.timestampSec, srcIp, srcPort, dstIp, dstPort);
+              stream.isEncrypted = true;
+              stream.isDecrypted = false;
+              if (!stream.encryptedPacketIndex) stream.encryptedPacketIndex = [];
+              stream.encryptedPacketIndex.push({
+                offset: pkt.fileOffset || 0,
+                length: pkt.data.length,
+                timestampSec: pkt.timestampSec,
+              });
+            }
+          } else if (isSecure) {
+            const stream = rtpDemuxer.addPacket(rtp, pkt.timestampSec, srcIp, srcPort, dstIp, dstPort);
+            stream.isEncrypted = true;
+            stream.isDecrypted = false;
+            if (!stream.encryptedPacketIndex) stream.encryptedPacketIndex = [];
+            stream.encryptedPacketIndex.push({
+              offset: pkt.fileOffset || 0,
+              length: pkt.data.length,
+              timestampSec: pkt.timestampSec,
+            });
+          } else {
+            // Unencrypted plain stream - zero overhead, identical to baseline
+            rtpDemuxer.addPacket(rtp, pkt.timestampSec, srcIp, srcPort, dstIp, dstPort);
+          }
         } else {
           // Check RTCP
-          const rtcp = RtpDemuxer.parseRtcp(payload);
-          if (rtcp) {
-            rtcpPackets++;
-            rtpDemuxer.addRtcpPacket(rtcp, pkt.timestampSec);
+          const srtpCtx = keyRegistry.getContextForPacket(0, srcIp, srcPort, dstIp, dstPort, pkt.timestampSec);
+          if (srtpCtx) {
+            try {
+              const unprotectRtcpRes = srtpCtx.unprotectRtcp(payload);
+              const decryptedRtcp = RtpDemuxer.parseRtcp(unprotectRtcpRes.decryptedPacket);
+              if (decryptedRtcp) {
+                rtcpPackets++;
+                rtpDemuxer.addRtcpPacket(decryptedRtcp, pkt.timestampSec);
+              }
+            } catch {
+              // Gracefully handle unparseable/encrypted RTCP
+            }
+          } else {
+            const rtcp = RtpDemuxer.parseRtcp(payload);
+            if (rtcp) {
+              rtcpPackets++;
+              rtpDemuxer.addRtcpPacket(rtcp, pkt.timestampSec);
+            }
           }
         }
       }
@@ -181,6 +255,7 @@ export class CapturePipeline {
       mediaServer,
       legs,
       conversations,
+      keyRegistry,
       stats: {
         totalFrames,
         sipPackets,

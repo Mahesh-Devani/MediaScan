@@ -84,6 +84,7 @@ export class PcapParser {
       return null;
     }
 
+    const packetOffset = this.offset;
     const le = this.header.isLittleEndian;
     const tsSec = this.view.getUint32(this.offset, le);
     const tsUsec = this.view.getUint32(this.offset + 4, le);
@@ -107,6 +108,7 @@ export class PcapParser {
       capturedLength: inclLen,
       originalLength: origLen,
       data: packetData,
+      fileOffset: packetOffset,
     };
   }
 
@@ -139,6 +141,7 @@ export class PcapParser {
 
       // Enhanced Packet Block (0x00000006)
       if (blockType === 0x00000006) {
+        const blockOffset = this.offset;
         const tsHigh = this.view.getUint32(this.offset + 12, le);
         const tsLow = this.view.getUint32(this.offset + 16, le);
         const capLen = this.view.getUint32(this.offset + 20, le);
@@ -158,11 +161,13 @@ export class PcapParser {
           capturedLength: capLen,
           originalLength: origLen,
           data: packetData,
+          fileOffset: blockOffset,
         };
       }
 
       // Simple Packet Block (0x00000003)
       if (blockType === 0x00000003) {
+        const blockOffset = this.offset;
         const origLen = this.view.getUint32(this.offset + 8, le);
         const capLen = Math.min(origLen, blockTotalLength - 16);
         const packetData = this.data.subarray(this.offset + 12, this.offset + 12 + capLen);
@@ -176,6 +181,7 @@ export class PcapParser {
           capturedLength: capLen,
           originalLength: origLen,
           data: packetData,
+          fileOffset: blockOffset,
         };
       }
 
