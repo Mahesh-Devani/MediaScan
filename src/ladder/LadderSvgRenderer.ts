@@ -215,15 +215,17 @@ export class LadderSvgRenderer {
 
     // Render SRTP Encryption Lock Badge if stream is encrypted
     if (s.isEncrypted) {
+      const isKeyInvalid = s.authPassRate !== undefined && s.authPassRate === 0;
+      const isValidDecrypted = s.isDecrypted && !isKeyInvalid;
       const lockPillX = badgeX + badgeWidth + extraPillOffset;
-      const lockPillW = s.isDecrypted ? 46 : 56;
-      const lockColor = s.isDecrypted ? '#9ece6a' : '#f7768e';
-      const lockBg = s.isDecrypted ? 'rgba(158, 206, 106, 0.2)' : 'rgba(247, 118, 142, 0.2)';
-      const lockText = s.isDecrypted ? '🔒 SRTP' : '🔒 Locked';
+      const lockPillW = isKeyInvalid ? 72 : (isValidDecrypted ? 46 : 56);
+      const lockColor = isValidDecrypted ? '#9ece6a' : '#f7768e';
+      const lockBg = isValidDecrypted ? 'rgba(158, 206, 106, 0.2)' : 'rgba(247, 118, 142, 0.2)';
+      const lockText = isValidDecrypted ? '🔒 SRTP' : (isKeyInvalid ? '🔒 Key Invalid' : '🔒 Locked');
       const authInfo = s.authPassRate !== undefined ? `\nAuth Pass Rate: ${s.authPassRate.toFixed(1)}%` : '';
-      const tooltip = s.isDecrypted
+      const tooltip = isValidDecrypted
         ? `SRTP Decrypted: ${s.cryptoSuite || 'AES_CM_128_HMAC_SHA1_80'}${authInfo}`
-        : `SRTP Encrypted (Key Missing or Invalid)`;
+        : (isKeyInvalid ? `SRTP Auth Failed: Key Invalid (0% tag match)` : `SRTP Encrypted (Key Missing)`);
 
       res += `    <g class="ladder-srtp-badge" style="cursor: help;" title="${tooltip}">\n`;
       res += `      <rect x="${lockPillX}" y="${y - 8}" width="${lockPillW}" height="15" rx="3" fill="#1f2335" stroke="${lockColor}" stroke-width="1.2"/>\n`;
