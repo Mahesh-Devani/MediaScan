@@ -40,6 +40,7 @@
     <div class="nav-tab" data-tab="tab-rtp">RTP Audio Streams</div>
     <div class="nav-tab" data-tab="tab-metrics">RTP Stream Metrics &amp; Telemetry</div>
     <div class="nav-tab" data-tab="tab-dnsmos-tool">🧠 DNSMOS Tool</div>
+    <div class="nav-tab" data-tab="tab-clip-studio">🎙️ Clip Studio</div>
   </nav>
 
   <!-- Drag and drop zone -->
@@ -918,6 +919,364 @@
 
       </div>
     </div>
+
+    <!-- Tab 6: Clip Studio (Text-to-Speech & Codec Raw-Clip Converter) -->
+    <div class="tab-content" id="tab-clip-studio" style="display: none;">
+      <div style="background-color: var(--bg-secondary); border: 1px solid var(--border); border-radius: 8px; padding: 18px 22px; display: flex; flex-direction: column; gap: 16px;">
+        
+        <!-- Header -->
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px;">
+          <div>
+            <h3 style="font-size: 17px; font-weight: 700; color: #fff; margin-bottom: 4px; display: flex; align-items: center; gap: 8px;">
+              <span style="color: #7aa2f7;">🎙️</span> Clip Studio &mdash; Telephony Speech &amp; Codec Lab
+            </h3>
+            <p style="font-size: 12px; color: var(--text-dim); margin: 0;">
+              High-fidelity multilingual neural Text-to-Speech synthesis and multi-format telecom raw clip encoder matching standard RTP generator conventions. 100% Client-Side.
+            </p>
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <button class="btn btn-sm clipstudio-subtab active" data-subtab="convert" style="padding: 5px 14px; font-size: 12px; font-weight: 600;">🔄 Codec Converter</button>
+            <button class="btn btn-sm clipstudio-subtab" data-subtab="tts" style="padding: 5px 14px; font-size: 12px; font-weight: 600;">🗣️ Text-to-Speech</button>
+          </div>
+        </div>
+
+        <!-- Subpanel 1: Codec Raw-Clip Converter -->
+        <div id="panel-clipstudio-convert" style="display: block;">
+          <!-- Dropzone -->
+          <div id="clipstudio-convert-dropzone" style="border: 2px dashed var(--border); border-radius: 8px; padding: 24px 20px; text-align: center; background: rgba(0,0,0,0.15); transition: border-color 0.2s, background 0.2s; cursor: pointer; margin-bottom: 16px;">
+            <div style="font-size: 32px; margin-bottom: 8px;">🎵</div>
+            <div style="font-size: 14px; font-weight: 600; color: #fff; margin-bottom: 4px;">Drag &amp; drop audio file here to convert</div>
+            <div style="font-size: 12px; color: var(--text-dim); margin-bottom: 12px;">
+              Supports WAV (all PCM formats), 3GP / MP4 (AMR-NB / AMR-WB tracks), raw codec streams (G.711, G.722, G.726, G.729, AMR, Opus), and containerized audio.
+            </div>
+            <button class="btn btn-primary" id="btn-clipstudio-select-file" style="padding: 6px 16px; font-size: 12px;">📁 Select Audio File</button>
+            <input type="file" id="clipstudio-convert-file-input" accept=".wav,.pcm,.raw,.ulaw,.alaw,.722,.g722,.g726,.729,.g729,.amr,.awb,.amrwb,.evs,.3gp,.mp4,.m4a,.opus,.ogg,.mp3,.aac,.flac" style="display: none;">
+          </div>
+
+          <!-- Input Summary Card -->
+          <div id="clipstudio-input-summary-card" style="display: none; background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: 6px; padding: 12px 16px; margin-bottom: 16px;">
+            <div style="font-size: 12px; font-weight: 700; color: #7aa2f7; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">Input Audio Telemetry</div>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; font-size: 12px;">
+              <div><span style="color: var(--text-dim);">File:</span> <strong id="cs-input-filename">-</strong></div>
+              <div><span style="color: var(--text-dim);">Format:</span> <strong id="cs-input-format">-</strong></div>
+              <div><span style="color: var(--text-dim);">Sample Rate:</span> <strong id="cs-input-rate">-</strong></div>
+              <div><span style="color: var(--text-dim);">Channels:</span> <strong id="cs-input-channels">-</strong></div>
+              <div><span style="color: var(--text-dim);">Duration:</span> <strong id="cs-input-duration">-</strong></div>
+              <div><span style="color: var(--text-dim);">Levels:</span> <strong id="cs-input-levels">-</strong></div>
+            </div>
+          </div>
+
+          <!-- Configuration Controls Grid -->
+          <div style="background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: 6px; padding: 16px; margin-bottom: 16px; display: flex; flex-direction: column; gap: 14px;">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px;">
+              <!-- Target Codec -->
+              <div>
+                <label style="display: block; font-size: 12px; font-weight: 600; color: #fff; margin-bottom: 6px;">Target Codec</label>
+                <select id="cs-codec-select" style="width: 100%; padding: 6px 10px; font-size: 12px; background: var(--bg-secondary); border: 1px solid var(--border); color: #fff; border-radius: 4px;"></select>
+              </div>
+
+              <!-- Mode / Bitrate -->
+              <div>
+                <label style="display: block; font-size: 12px; font-weight: 600; color: #fff; margin-bottom: 6px;">Operating Mode / Bitrate</label>
+                <select id="cs-mode-select" style="width: 100%; padding: 6px 10px; font-size: 12px; background: var(--bg-secondary); border: 1px solid var(--border); color: #fff; border-radius: 4px;"></select>
+              </div>
+
+              <!-- Channel Selection -->
+              <div>
+                <label style="display: block; font-size: 12px; font-weight: 600; color: #fff; margin-bottom: 6px;">Channel Selection</label>
+                <select id="cs-channel-select" style="width: 100%; padding: 6px 10px; font-size: 12px; background: var(--bg-secondary); border: 1px solid var(--border); color: #fff; border-radius: 4px;">
+                  <option value="mix">Mono Downmix</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- DTX & Preprocessing Toggles -->
+            <div style="display: flex; flex-wrap: wrap; gap: 16px; align-items: center; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 12px; font-size: 12px;">
+              <label id="cs-lbl-dtx" style="display: flex; align-items: center; gap: 6px; color: var(--text-dim); cursor: pointer;" title="Discontinuous Transmission: Generates SID comfort noise updates during silence">
+                <input type="checkbox" id="cs-chk-dtx"> <strong>Enable DTX (Silence Suppression)</strong>
+              </label>
+
+              <label style="display: flex; align-items: center; gap: 6px; color: var(--text-dim); cursor: pointer;" title="DC Blocker filter to center the waveform at 0">
+                <input type="checkbox" id="cs-chk-dc" checked> Remove DC Offset
+              </label>
+
+              <label style="display: flex; align-items: center; gap: 6px; color: var(--text-dim); cursor: pointer;" title="70 Hz 2nd order Butterworth high-pass filter to remove low-frequency rumble">
+                <input type="checkbox" id="cs-chk-highpass"> 70 Hz Telecom High-pass
+              </label>
+
+              <label style="display: flex; align-items: center; gap: 6px; color: var(--text-dim); cursor: pointer;" title="Normalize audio to -1.0 dBFS peak">
+                <input type="checkbox" id="cs-chk-norm" checked> Peak Normalize (-1.0 dBFS)
+              </label>
+
+              <label style="display: flex; align-items: center; gap: 6px; color: var(--text-dim); cursor: pointer;" title="Trim leading and trailing silence">
+                <input type="checkbox" id="cs-chk-trim"> Trim Silence
+              </label>
+            </div>
+
+            <!-- Custom Base Name & Filename Preview -->
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 12px;">
+              <div style="display: flex; align-items: center; gap: 10px; flex: 1; min-width: 260px;">
+                <span style="font-size: 12px; color: var(--text-dim);">Base Name:</span>
+                <input type="text" id="cs-custom-basename" placeholder="e.g. speech" style="padding: 5px 10px; font-size: 12px; background: var(--bg-secondary); border: 1px solid var(--border); color: #fff; border-radius: 4px; width: 140px;">
+                <span style="font-size: 12px; color: var(--text-dim);">&rarr; Target Filename:</span>
+                <span id="cs-filename-preview" style="font-family: monospace; font-size: 13px; font-weight: 700; color: #2ac3de; background: rgba(42, 195, 222, 0.1); padding: 3px 8px; border-radius: 4px;">speech.raw</span>
+              </div>
+
+              <button class="btn btn-primary" id="btn-clipstudio-encode" disabled style="padding: 7px 20px; font-size: 13px; font-weight: 700;">⚡ Encode Raw Clip</button>
+            </div>
+          </div>
+
+          <!-- Result Card & A/B Player -->
+          <div id="clipstudio-result-card" style="display: none; background: var(--bg-secondary); border: 1px solid #7aa2f7; border-radius: 8px; padding: 16px; margin-bottom: 16px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 12px;">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="font-size: 16px;">✅</span>
+                <strong style="color: #fff; font-size: 14px;">Encoded Output:</strong>
+                <span id="cs-res-filename" style="font-family: monospace; color: #7aa2f7; font-weight: 700;">-</span>
+              </div>
+              <button class="btn btn-primary" id="btn-clipstudio-download" style="padding: 6px 16px; font-size: 12px;">⬇ Download Raw Clip</button>
+            </div>
+
+            <!-- Stats Bar -->
+            <div style="display: flex; flex-wrap: wrap; gap: 16px; font-size: 12px; background: rgba(0,0,0,0.25); padding: 10px 14px; border-radius: 6px; margin-bottom: 14px;">
+              <div><span style="color: var(--text-dim);">Total Size:</span> <strong id="cs-res-size">-</strong></div>
+              <div><span style="color: var(--text-dim);">Duration:</span> <strong id="cs-res-duration">-</strong></div>
+              <div><span style="color: var(--text-dim);">Frames:</span> <strong id="cs-res-frames">-</strong></div>
+              <div><span style="color: var(--text-dim);">Bitrate:</span> <strong id="cs-res-bitrate">-</strong></div>
+              <div><span style="color: var(--text-dim);">DTX:</span> <strong id="cs-res-dtx">-</strong></div>
+            </div>
+
+            <!-- Synchronized A/B Player -->
+            <div style="background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: 6px; padding: 14px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 10px;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                  <button class="btn btn-sm btn-primary" id="btn-cs-player-play" style="padding: 4px 14px; font-size: 12px;">▶ Play</button>
+                  <span id="cs-player-time" style="font-family: monospace; font-size: 12px; color: var(--text-dim);">0:00.0 / 0:00.0</span>
+                </div>
+
+                <!-- Track A / Track B Switcher -->
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span style="font-size: 12px; color: var(--text-dim); font-weight: 600;">Monitor:</span>
+                  <div style="display: inline-flex; border: 1px solid var(--border); border-radius: 4px; overflow: hidden;">
+                    <button class="btn btn-sm" id="btn-cs-track-a" style="padding: 4px 12px; font-size: 11px; border: none; border-radius: 0; background: var(--bg-secondary); color: #7aa2f7;">[A] Original</button>
+                    <button class="btn btn-sm active" id="btn-cs-track-b" style="padding: 4px 12px; font-size: 11px; border: none; border-radius: 0; background: #9ece6a; color: #16161e; font-weight: 700;">[B] Encoded</button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Interactive Waveform Canvas -->
+              <canvas id="cs-waveform-canvas" width="700" height="70" style="width: 100%; height: 70px; border-radius: 4px; display: block; cursor: pointer;"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- Subpanel 2: Text-to-Speech Studio -->
+        <div id="panel-clipstudio-tts" style="display: none;">
+          <div style="background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: 6px; padding: 18px; margin-bottom: 16px; display: flex; flex-direction: column; gap: 16px;">
+            
+            <!-- Language & Voice Header Row -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; align-items: flex-end;">
+              <div>
+                <label style="display: block; font-size: 12px; font-weight: 600; color: #fff; margin-bottom: 6px;">Target Language</label>
+                <select id="tts-language-select" style="width: 100%; padding: 7px 10px; font-size: 12px; background: var(--bg-secondary); border: 1px solid var(--border); color: #fff; border-radius: 4px;">
+                  <option value="en_US">English (United States)</option>
+                  <option value="en_IN">English (India) [Commonwealth Fallback]</option>
+                  <option value="es_ES">Spanish (Spain)</option>
+                  <option value="tr_TR">Turkish (Turkey)</option>
+                  <option value="fr_FR">French (France)</option>
+                  <option value="de_DE">German (Germany)</option>
+                  <option value="ar_JO">Arabic (Jordan / Levantine)</option>
+                  <option value="pl_PL">Polish (Poland)</option>
+                </select>
+              </div>
+
+              <div>
+                <label style="display: block; font-size: 12px; font-weight: 600; color: #fff; margin-bottom: 6px;">Voice Model</label>
+                <select id="tts-voice-select" style="width: 100%; padding: 7px 10px; font-size: 12px; background: var(--bg-secondary); border: 1px solid var(--border); color: #fff; border-radius: 4px;"></select>
+              </div>
+
+              <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <button class="btn btn-secondary" id="btn-tts-models-manager" style="padding: 7px 14px; font-size: 12px; white-space: nowrap;">🌐 Manage / Fetch Models</button>
+                <button class="btn btn-secondary" id="btn-tts-add-voice" style="padding: 7px 14px; font-size: 12px; white-space: nowrap;">➕ Add Custom Voice</button>
+                <button class="btn btn-secondary" id="btn-tts-load-sample" style="padding: 7px 14px; font-size: 12px; white-space: nowrap;">Load Sample Phrase</button>
+                <input type="file" id="tts-custom-model-file" accept=".onnx" style="display: none;">
+                <input type="file" id="tts-custom-config-file" accept=".json" style="display: none;">
+              </div>
+            </div>
+
+            <!-- Fallback Alert Box (e.g. for en_IN) -->
+            <div id="tts-voice-note-box" style="display: none; background: rgba(224, 175, 104, 0.12); border: 1px solid #e0af68; border-radius: 4px; padding: 8px 12px; font-size: 11px; color: #e0af68;">
+              <span id="tts-voice-note-text"></span>
+            </div>
+
+            <!-- Text Input Area -->
+            <div>
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                <label style="font-size: 12px; font-weight: 600; color: #fff;">Speech Prompt</label>
+                <div style="display: flex; gap: 12px; align-items: center; font-size: 11px; color: var(--text-dim);">
+                  <span style="color: #e0af68;" title="Sample phrases require review by native speaker">⚠️ Native-speaker review recommended</span>
+                  <span id="tts-char-count">0 / 500 chars</span>
+                </div>
+              </div>
+              <textarea id="tts-prompt-input" rows="3" maxlength="500" placeholder="Type text to synthesize..." style="width: 100%; padding: 10px; font-size: 13px; background: var(--bg-secondary); border: 1px solid var(--border); color: #fff; border-radius: 4px; resize: vertical; line-height: 1.5; font-family: inherit;"></textarea>
+            </div>
+
+            <!-- Controls: Speed, Pause, Sample Rate, Post-Processing -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 12px; font-size: 12px;">
+              <div>
+                <label style="display: flex; justify-content: space-between; color: var(--text-dim); margin-bottom: 4px;">
+                  <span>Speaking Speed</span>
+                  <span id="tts-lbl-speed" style="color: #7aa2f7; font-weight: 700;">1.0x</span>
+                </label>
+                <input type="range" id="tts-range-speed" min="0.5" max="2.0" step="0.1" value="1.0" style="width: 100%;">
+              </div>
+
+              <div>
+                <label style="display: flex; justify-content: space-between; color: var(--text-dim); margin-bottom: 4px;">
+                  <span>Sentence Pause</span>
+                  <span id="tts-lbl-pause" style="color: #7aa2f7; font-weight: 700;">300 ms</span>
+                </label>
+                <input type="range" id="tts-range-pause" min="100" max="1000" step="50" value="300" style="width: 100%;">
+              </div>
+
+              <div>
+                <label style="display: block; color: var(--text-dim); margin-bottom: 4px;">Target Output Rate</label>
+                <select id="tts-sample-rate-select" style="width: 100%; padding: 5px 8px; font-size: 12px; background: var(--bg-secondary); border: 1px solid var(--border); color: #fff; border-radius: 4px;">
+                  <option value="0">Voice Native (22,050 Hz)</option>
+                  <option value="8000">8,000 Hz (Narrowband / G.711 / AMR)</option>
+                  <option value="16000">16,000 Hz (Wideband / G.722 / AMR-WB)</option>
+                  <option value="32000">32,000 Hz (Super-Wideband / EVS)</option>
+                  <option value="48000">48,000 Hz (Fullband / Opus)</option>
+                </select>
+              </div>
+
+              <div>
+                <label style="display: block; color: var(--text-dim); margin-bottom: 4px;">Target Duration (sec)</label>
+                <div style="display: flex; gap: 6px;">
+                  <input type="number" id="tts-inp-duration" placeholder="Auto" min="0" step="0.5" style="width: 70px; padding: 5px 8px; font-size: 12px; background: var(--bg-secondary); border: 1px solid var(--border); color: #fff; border-radius: 4px;">
+                  <select id="tts-sel-duration-mode" style="flex: 1; padding: 5px 6px; font-size: 11px; background: var(--bg-secondary); border: 1px solid var(--border); color: #fff; border-radius: 4px;">
+                    <option value="pad">Pad with Silence</option>
+                    <option value="loop">Loop Audio</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <!-- Toggles Row: Normalization, Leading/Trailing Silence -->
+            <div style="display: flex; flex-wrap: wrap; gap: 16px; align-items: center; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 12px; font-size: 12px;">
+              <label style="display: flex; align-items: center; gap: 6px; color: var(--text-dim); cursor: pointer;" title="Normalize synthesized speech to -1.0 dBFS">
+                <input type="checkbox" id="tts-chk-norm" checked> Peak Normalize (-1.0 dBFS)
+              </label>
+
+              <label style="display: flex; align-items: center; gap: 6px; color: var(--text-dim);">
+                <span>Leading Silence:</span>
+                <input type="number" id="tts-inp-lead-silence" min="0" max="5" step="0.1" value="0.0" style="width: 50px; padding: 3px 6px; font-size: 11px; background: var(--bg-secondary); border: 1px solid var(--border); color: #fff; border-radius: 4px;"> s
+              </label>
+
+              <label style="display: flex; align-items: center; gap: 6px; color: var(--text-dim);">
+                <span>Trailing Silence:</span>
+                <input type="number" id="tts-inp-trail-silence" min="0" max="5" step="0.1" value="0.0" style="width: 50px; padding: 3px 6px; font-size: 11px; background: var(--bg-secondary); border: 1px solid var(--border); color: #fff; border-radius: 4px;"> s
+              </label>
+
+              <div style="margin-left: auto; display: flex; gap: 10px; align-items: center;">
+                <button class="btn btn-secondary" id="btn-tts-cancel" style="display: none; padding: 7px 16px; font-size: 13px;">Cancel</button>
+                <button class="btn btn-primary" id="btn-tts-synthesize" style="padding: 7px 22px; font-size: 13px; font-weight: 700;">🗣️ Synthesize Speech</button>
+              </div>
+            </div>
+
+            <!-- Progress Bar -->
+            <div id="tts-progress-container" style="display: none; margin-top: -4px;">
+              <div style="display: flex; justify-content: space-between; font-size: 11px; color: #7aa2f7; margin-bottom: 4px;">
+                <span id="tts-progress-status">Synthesizing audio neural frames...</span>
+                <span id="tts-progress-pct">Working...</span>
+              </div>
+              <div style="height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; overflow: hidden;">
+                <div id="tts-progress-bar" style="height: 100%; width: 100%; background: #7aa2f7; animation: progress-indeterminate 1.5s infinite linear;"></div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- TTS Output Result & Waveform Preview Card -->
+          <div id="tts-result-card" style="display: none; background: var(--bg-secondary); border: 1px solid #7aa2f7; border-radius: 8px; padding: 16px; margin-bottom: 16px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 12px;">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="font-size: 16px;">🎙️</span>
+                <strong style="color: #fff; font-size: 14px;">Synthesized Audio:</strong>
+                <span id="tts-res-voice-label" style="font-family: monospace; color: #7aa2f7; font-weight: 700;">en_US</span>
+                <span class="badge-tag" style="background: rgba(158, 206, 106, 0.2); color: #9ece6a; border: 1px solid #9ece6a; font-size: 11px;">Neural ONNX</span>
+              </div>
+              <div style="display: flex; gap: 8px;">
+                <button class="btn btn-secondary" id="btn-tts-download-wav" style="padding: 6px 14px; font-size: 12px;">⬇ Export WAV</button>
+                <button class="btn btn-primary" id="btn-tts-handoff-convert" style="padding: 6px 16px; font-size: 12px; font-weight: 700;">⚡ Encode as Raw Clip &rarr;</button>
+              </div>
+            </div>
+
+            <!-- Stats Bar -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: 6px; padding: 10px 14px; font-size: 12px; margin-bottom: 14px;">
+              <div>
+                <span style="display: block; color: var(--text-dim); font-size: 11px;">Duration</span>
+                <strong id="tts-res-duration" style="color: #fff;">0.00s</strong>
+              </div>
+              <div>
+                <span style="display: block; color: var(--text-dim); font-size: 11px;">Sample Rate</span>
+                <strong id="tts-res-rate" style="color: #fff;">22,050 Hz</strong>
+              </div>
+              <div>
+                <span style="display: block; color: var(--text-dim); font-size: 11px;">Samples</span>
+                <strong id="tts-res-samples" style="color: #fff;">0</strong>
+              </div>
+              <div>
+                <span style="display: block; color: var(--text-dim); font-size: 11px;">Normalized Text</span>
+                <strong id="tts-res-norm-preview" style="color: #7aa2f7; font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; max-width: 220px;">-</strong>
+              </div>
+            </div>
+
+            <!-- Waveform Canvas & Playback Bar -->
+            <div style="background: #111; border: 1px solid var(--border); border-radius: 6px; padding: 10px; position: relative;">
+              <canvas id="tts-waveform-canvas" height="60" style="width: 100%; display: block;"></canvas>
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px;">
+                <div style="display: flex; gap: 8px; align-items: center;">
+                  <button class="btn btn-secondary" id="btn-tts-play" style="padding: 4px 12px; font-size: 12px;">▶ Play</button>
+                  <span id="tts-play-time" style="font-family: monospace; font-size: 11px; color: var(--text-dim);">0:00.0 / 0:00.0</span>
+                </div>
+                <div style="font-size: 11px; color: var(--text-dim);">Click waveform to scrub playhead</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Voice Models Manager Modal -->
+        <div id="tts-models-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 9999; justify-content: center; align-items: center; padding: 20px;">
+          <div style="background: #1f2335; border: 1px solid var(--border); border-radius: 8px; width: 100%; max-width: 880px; max-height: 90vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+            <div style="padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; background: #1a1b26;">
+              <div>
+                <h4 style="margin: 0; font-size: 15px; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 8px;">
+                  <span>🌐</span> Offline Neural Voice Models &amp; Upstream Fetcher
+                </h4>
+                <p style="margin: 4px 0 0 0; font-size: 11px; color: var(--text-dim);">
+                  100% Client-Side. Models are under permissive open licenses (MIT / CC0 / CC-BY-4.0). Fetch latest releases directly from HuggingFace to update or cache in browser.
+                </p>
+              </div>
+              <button id="btn-close-tts-models-modal" style="background: none; border: none; color: var(--text-dim); font-size: 24px; cursor: pointer; line-height: 1;">&times;</button>
+            </div>
+            <div style="padding: 16px 20px; overflow-y: auto; flex: 1;">
+              <div id="tts-models-table-container"></div>
+            </div>
+            <div style="padding: 12px 20px; border-top: 1px solid var(--border); background: #1a1b26; display: flex; justify-content: space-between; align-items: center;">
+              <div id="tts-models-status-msg" style="font-size: 12px; color: #7aa2f7;"></div>
+              <div style="display: flex; gap: 8px;">
+                <button class="btn btn-primary" id="btn-tts-fetch-all" style="padding: 6px 14px; font-size: 12px;">⬇️ Fetch All Latest Models</button>
+                <button class="btn btn-secondary" id="btn-close-tts-models-modal-bottom" style="padding: 6px 14px; font-size: 12px;">Close</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+
+      </div>
+    </div>
+  </div>
   </div>
 
   <!-- Audio Player Dock -->

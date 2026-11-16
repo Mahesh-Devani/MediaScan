@@ -10,6 +10,7 @@ import { SnrUiController } from './analysis/SnrUiController.ts';
 import { MosUiController } from './mos/MosUiController.ts';
 import { DnsmosUiController } from './dnsmos/DnsmosUiController.ts';
 import { DnsmosToolController } from './dnsmos/DnsmosToolController.ts';
+import { ClipStudioController } from './clipstudio/ClipStudioController.ts';
 import { VideoDecoderPlayer } from './video/VideoDecoderPlayer.ts';
 import { SrtpUiController } from './srtp/SrtpUiController.ts';
 import { SrtpKeyRegistry } from './srtp/SrtpKeyRegistry.ts';
@@ -130,6 +131,7 @@ SnrUiController.init();
 MosUiController.initialize(() => renderLadder());
 DnsmosUiController.init();
 const dnsmosToolController = new DnsmosToolController();
+ClipStudioController.getInstance().init();
 
 // Initialize SRTP / DTLS Key Management & Selective Decryption UI Controller
 const srtpUiController = new SrtpUiController(new SrtpKeyRegistry(), {
@@ -222,6 +224,17 @@ document.querySelectorAll('.nav-tab').forEach(tab => {
       dropzoneArea.style.display = 'none';
       dashboard.style.display = 'flex';
       document.getElementById('tab-dnsmos-tool')!.style.display = 'block';
+      audioPlayer.stop();
+      multiTrackPlayer.pause();
+      playerDock.style.display = 'none';
+      return;
+    }
+
+    if (targetId === 'tab-clip-studio') {
+      // Standalone Clip Studio tab: works directly with audio files, no PCAP required
+      dropzoneArea.style.display = 'none';
+      dashboard.style.display = 'flex';
+      document.getElementById('tab-clip-studio')!.style.display = 'block';
       audioPlayer.stop();
       multiTrackPlayer.pause();
       playerDock.style.display = 'none';

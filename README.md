@@ -72,10 +72,41 @@ MediaScan is a high-performance, browser-native web application for analyzing, v
 - **Multi-Channel & Bandwidth Telemetry**: Evaluates each channel independently (Mono, Stereo, 5.1, 7.1) with RMS and Peak dBFS reporting, silent channel detection, and spectral roll-off bandwidth estimation.
 - **Side-by-Side Comparison**: Multi-row comparison mode with $\Delta$ score metrics, rate/codec mismatch warnings, and overlaid timeline waveforms.
 
+### 10. Standalone Clip Studio (Telephony Speech & Codec Lab)
+- **Universal Codec Raw-Clip Converter**:
+  - Encodes raw audio into standard telephony test bitstreams matching RTP generator conventions: G.711 $\mu$-law/A-law, G.722 (64/56/48 kbps), G.726 (16/24/32/40 kbps ADPCM), G.729/G.729A, AMR-NB (4.75–12.2 kbps + DTX), AMR-WB (6.60–23.85 kbps + DTX), and EVS (Primary & AMR-WB IO, NB/WB/SWB/FB).
+  - Preprocessing controls: Channel downmixing/selection, resampling, DC offset removal, Butterworth high-pass filter, peak normalization, silence trimming, and duration padding/looping.
+  - Zero-transcode pass-through: Automatically detects existing AMR/3GP bitstreams to copy frames without re-encoding loss.
+  - Synchronized A/B monitoring player: Toggle between original source input [A] and encoded reconstructed output [B] with scrubbable waveform.
+- **Multilingual Neural Text-to-Speech Studio**:
+  - 100% client-side offline neural voice synthesis using Piper-compatible ONNX models and `onnxruntime-web` running in dedicated Web Workers.
+  - Client-side G2P phonemization via vendored eSpeak-ng WebAssembly (`piper_phonemize`).
+  - Pre-packaged voices for 8 languages: English (US), English (India), Spanish, Turkish, French, German, Arabic (RTL support), and Polish.
+  - Voice Manager & Upstream Fetcher: One-click fetch and browser cache update directly from official HuggingFace Piper releases.
+  - Custom voice loading: Import user-supplied `.onnx` and `.onnx.json` models dynamically in memory.
+  - Direct handoff to Codec Converter for single-click synthesis-to-encoding pipelines.
+
 ---
 
 ## Attributions & Third-Party Licenses
 
+- **Rhasspy Piper Neural Voice Models**:
+  - Official Repository: [https://github.com/rhasspy/piper](https://github.com/rhasspy/piper)
+  - Models, datasets, and licensing:
+    - **English (US) - Lessac (Medium)**: Public Domain / MIT (Lessac corpus, Rhasspy Piper)
+    - **English (India) - Commonwealth Voice (Alan Medium)**: [CC-BY-4.0](https://creativecommons.org/licenses/by/4.0/) by Alan Pope (Rhasspy Piper Commonwealth fallback)
+    - **Spanish - Davefx (Medium)**: [CC-BY-4.0](https://creativecommons.org/licenses/by/4.0/) (Rhasspy Piper)
+    - **Turkish - DFKI (Medium)**: [CC-BY-4.0](https://creativecommons.org/licenses/by/4.0/) (DFKI / Rhasspy Piper)
+    - **French - SIWIS (Medium)**: [CC-BY-4.0](https://creativecommons.org/licenses/by/4.0/) (SIWIS corpus / Rhasspy Piper)
+    - **German - Thorsten (Medium)**: [CC0 1.0 Universal](https://creativecommons.org/publicdomain/zero/1.0/) (Public Domain Dedication) by Thorsten Müller
+    - **Arabic - Kareem (Medium)**: [CC-BY-4.0](https://creativecommons.org/licenses/by/4.0/) (Rhasspy Piper)
+    - **Polish - Darkman (Medium)**: [CC-BY-4.0](https://creativecommons.org/licenses/by/4.0/) (Rhasspy Piper)
+- **eSpeak-ng & piper-phonemize WebAssembly**:
+  - Grapheme-to-phoneme (G2P) engine licensed under GNU General Public License v3 (GPLv3) and Apache 2.0 / BSD components.
+- **OpenCORE AMR-NB & AMR-WB / vo-amrwbenc**:
+  - GSM/3GPP AMR speech encoder/decoder engines licensed under Apache License 2.0.
+- **BCG729**:
+  - ITU-T G.729 compliant codec engine licensed under GNU General Public License v3 (GPLv3) by Belledonne Communications.
 - **Microsoft DNSMOS (Deep Noise Suppression Challenge)**:
   - Official Repository: [https://github.com/microsoft/DNS-Challenge](https://github.com/microsoft/DNS-Challenge)
   - Models (`sig_bak_ovr.onnx`, `sig_bak_ovr_p.onnx`, `model_v8.onnx`) and polynomial fitting equations licensed under [Creative Commons Attribution 4.0 International (CC-BY-4.0)](https://creativecommons.org/licenses/by/4.0/).
