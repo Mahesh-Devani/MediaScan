@@ -10,6 +10,7 @@ import { G726Decoder } from '../decoders/G726Decoder.ts';
 import { G729Decoder } from '../decoders/G729Decoder.ts';
 import { AmrDecoder } from '../decoders/AmrDecoder.ts';
 import { OpusDecoder } from '../decoders/OpusDecoder.ts';
+import { WavParser } from './WavParser.ts';
 
 export interface RawPcmOptions {
   sampleRate: number;
@@ -35,6 +36,7 @@ export interface LoadedAudio {
 
 export type SupportedRawCodec =
   | 'auto'
+  | 'wav'
   | 'pcm'
   | 'g711u'
   | 'g711a'
@@ -82,9 +84,28 @@ export class RawAudioLoader {
         return 'container';
       }
     }
+    if (bytes.length >= 12) {
+      // RIFF....WAVE
+      if (
+        bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46 &&
+        bytes[8] === 0x57 && bytes[9] === 0x41 && bytes[10] === 0x56 && bytes[11] === 0x45
+      ) {
+        return 'wav';
+      }
+      // RF64....WAVE
+      if (
+        bytes[0] === 0x52 && bytes[1] === 0x46 && bytes[2] === 0x36 && bytes[3] === 0x34 &&
+        bytes[8] === 0x57 && bytes[9] === 0x41 && bytes[10] === 0x56 && bytes[11] === 0x45
+      ) {
+        return 'wav';
+      }
+    }
 
     // Extension mappings
     switch (ext) {
+      case 'wav':
+      case 'wave':
+        return 'wav';
       case 'ulaw':
       case 'mulaw':
       case 'mu':
@@ -311,6 +332,25 @@ export class RawAudioLoader {
       };
     }
 
+    if (codec === 'wav') {
+      try {
+        const parsed = WavParser.parse(bytes, fileName);
+        return {
+          fileName,
+          codec: 'WAV',
+          formatName: `WAV ${parsed.formatName}, ${parsed.sampleRate} Hz`,
+          sampleRate: parsed.sampleRate,
+          numChannels: parsed.numChannels,
+          channelData: parsed.channelData,
+          durationSec: parsed.durationSec,
+          isContainerDecoded: false,
+        };
+      } catch (wavErr) {
+        // Fallback to decodeViaWebAudio on parse error or unsupported format
+        return this.decodeViaWebAudio(bytes, fileName);
+      }
+    }
+
     // 2. Browser Native WebCodecs / Web Audio Container Decoding
     return this.decodeViaWebAudio(bytes, fileName);
   }
@@ -340,7 +380,7 @@ export class RawAudioLoader {
       return {
         fileName,
         codec: 'Container',
-        formatName: `Container Decode (${Math.round(sampleRate)} Hz, ${numChannels} ch, best-effort)`,
+        formatName: `decoded by browser, rate resampled to ${Math.round(sampleRate)} Hz`,
         sampleRate,
         numChannels,
         channelData,

@@ -222,7 +222,7 @@ document.querySelectorAll('.nav-tab').forEach(tab => {
     if (targetId === 'tab-dnsmos-tool') {
       // Standalone DNSMOS Tool tab: works directly with audio files, no PCAP required
       dropzoneArea.style.display = 'none';
-      dashboard.style.display = 'flex';
+      dashboard.style.display = 'none';
       document.getElementById('tab-dnsmos-tool')!.style.display = 'block';
       audioPlayer.stop();
       multiTrackPlayer.pause();
@@ -233,7 +233,7 @@ document.querySelectorAll('.nav-tab').forEach(tab => {
     if (targetId === 'tab-clip-studio') {
       // Standalone Clip Studio tab: works directly with audio files, no PCAP required
       dropzoneArea.style.display = 'none';
-      dashboard.style.display = 'flex';
+      dashboard.style.display = 'none';
       document.getElementById('tab-clip-studio')!.style.display = 'block';
       audioPlayer.stop();
       multiTrackPlayer.pause();
@@ -252,9 +252,13 @@ document.querySelectorAll('.nav-tab').forEach(tab => {
       return;
     }
 
-    // If PCAP is loaded, show dashboard and target tab content
+    // If PCAP is loaded, show dashboard for ladder/sip/rtp and hide for standalone tab-metrics
     dropzoneArea.style.display = 'none';
-    dashboard.style.display = 'flex';
+    if (targetId === 'tab-metrics') {
+      dashboard.style.display = 'none';
+    } else {
+      dashboard.style.display = 'flex';
+    }
     document.getElementById(targetId)!.style.display = 'block';
 
     if (targetId === 'tab-rtp') {
