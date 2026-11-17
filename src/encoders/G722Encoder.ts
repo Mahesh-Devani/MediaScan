@@ -143,32 +143,22 @@ function sZero(curDiff: number, band: G722Band): void {
 }
 
 function doAdaptivePrediction(band: G722Band, curDiff: number): void {
-  const sg0 = SIGN_LOOKUP[curDiff >> 15];
-  const sg1 = SIGN_LOOKUP[band.partReconstMem[0] >> 15];
-  const sg2 = SIGN_LOOKUP[band.partReconstMem[1] >> 15];
+  const curPartReconst = band.sZero + curDiff < 0 ? 1 : 0;
+  const sg0 = SIGN_LOOKUP[curPartReconst !== band.partReconstMem[0] ? 1 : 0];
+  const sg1 = SIGN_LOOKUP[curPartReconst === band.partReconstMem[1] ? 1 : 0];
 
   band.partReconstMem[1] = band.partReconstMem[0];
-  band.partReconstMem[0] = avClipInt16(band.sZero + curDiff);
+  band.partReconstMem[0] = curPartReconst;
 
-  const prevPole0 = band.poleMem[0];
-  const prevPole1 = band.poleMem[1];
+  band.poleMem[1] = avClip(
+    ((sg0 * avClip(band.poleMem[0], -8191, 8191)) >> 5) +
+      sg1 * 128 +
+      ((band.poleMem[1] * 127) >> 7),
+    -12288,
+    12288
+  );
 
-  let polePart = (prevPole0 * 255) >> 8;
-  if (sg0 === sg1) {
-    polePart += 128;
-  } else {
-    polePart -= 128;
-  }
-  let p1 = (prevPole1 * 255) >> 8;
-  if (sg0 === sg2) {
-    p1 += 128;
-  } else {
-    p1 -= 128;
-  }
-  p1 += (prevPole0 * polePart) >> 14;
-
-  const limit = 12288 - Math.abs(prevPole0);
-  band.poleMem[1] = avClip(p1, -12288, 12288);
+  const limit = 15360 - band.poleMem[1];
   band.poleMem[0] = avClip(-192 * sg0 + ((band.poleMem[0] * 255) >> 8), -limit, limit);
 
   sZero(curDiff, band);

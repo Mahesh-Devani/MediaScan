@@ -31,6 +31,9 @@ export interface CodecProfile {
   filenameTemplate: string; // e.g. '{base}.{CODEC}r{rate}{dtx}' or '{base}.{ext}'
   fileMagic?: Uint8Array;   // Container file header magic (e.g. #!AMR\n)
   channelCountHeader?: boolean; // EVS 4-byte big-endian channel count
+  docUrl?: string;          // Official specification or standard documentation URL
+  docTitle?: string;        // Specification label e.g. 'ITU-T G.722'
+  description?: string;     // Technical summary of the codec
 }
 
 export class CodecProfileRegistry {
@@ -51,7 +54,10 @@ export class CodecProfileRegistry {
       supportsDtx: false,
       defaultDtx: false,
       fileExtension: 'ulaw',
-      filenameTemplate: '{base}.ulaw'
+      filenameTemplate: '{base}.ulaw',
+      docUrl: 'https://www.itu.int/rec/T-REC-G.711',
+      docTitle: 'ITU-T G.711',
+      description: 'ITU-T G.711 µ-law: 64 kbps (8 kHz) PCM log companding. Primary PSTN and VoIP standard in North America and Japan.'
     });
 
     // 2. G.711 A-law (PCMA)
@@ -68,7 +74,10 @@ export class CodecProfileRegistry {
       supportsDtx: false,
       defaultDtx: false,
       fileExtension: 'alaw',
-      filenameTemplate: '{base}.alaw'
+      filenameTemplate: '{base}.alaw',
+      docUrl: 'https://www.itu.int/rec/T-REC-G.711',
+      docTitle: 'ITU-T G.711',
+      description: 'ITU-T G.711 A-law: 64 kbps (8 kHz) PCM log companding. Primary PSTN and VoIP standard in Europe and internationally.'
     });
 
     // 3. G.722 (Wideband Sub-band ADPCM)
@@ -87,7 +96,10 @@ export class CodecProfileRegistry {
       supportsDtx: false,
       defaultDtx: false,
       fileExtension: '722',
-      filenameTemplate: '{base}.722'
+      filenameTemplate: '{base}.722',
+      docUrl: 'https://www.itu.int/rec/T-REC-G.722',
+      docTitle: 'ITU-T G.722',
+      description: 'ITU-T G.722: 7 kHz Wideband audio coding at 64/56/48 kbps using Sub-Band ADPCM (16 kHz). Provides crystal-clear wideband HD voice.'
     });
 
     // 4. G.726 (Narrowband ADPCM)
@@ -107,7 +119,10 @@ export class CodecProfileRegistry {
       supportsDtx: false,
       defaultDtx: false,
       fileExtension: 'g726',
-      filenameTemplate: '{base}.g726'
+      filenameTemplate: '{base}.g726',
+      docUrl: 'https://www.itu.int/rec/T-REC-G.726',
+      docTitle: 'ITU-T G.726',
+      description: 'ITU-T G.726: 40, 32, 24, 16 kbps ADPCM (8 kHz). Standard for DECT wireless cordless phones and PBX interconnects.'
     });
 
     // 5. AMR-NB (3GPP TS 26.101 / RFC 4867)
@@ -133,7 +148,10 @@ export class CodecProfileRegistry {
       supportsOctetAlignToggle: true,
       fileExtension: 'amr',
       filenameTemplate: '{base}.AMRr{rate}{dtx}',
-      fileMagic: new Uint8Array([0x23, 0x21, 0x41, 0x4d, 0x52, 0x0a]) // #!AMR\n
+      fileMagic: new Uint8Array([0x23, 0x21, 0x41, 0x4d, 0x52, 0x0a]), // #!AMR\n
+      docUrl: 'https://www.3gpp.org/ftp/Specs/archive/26_series/26.071/',
+      docTitle: '3GPP TS 26.071 / RFC 4867',
+      description: '3GPP TS 26.071 / RFC 4867: Adaptive Multi-Rate Narrowband speech codec (8 kHz, 4.75–12.2 kbps). Standard 2G/3G mobile cellular codec.'
     });
 
     // 6. AMR-WB (3GPP TS 26.201 / ITU-T G.722.2 / RFC 4867)
@@ -160,7 +178,10 @@ export class CodecProfileRegistry {
       supportsOctetAlignToggle: true,
       fileExtension: 'awb',
       filenameTemplate: '{base}.AMRWBr{rate}{dtx}',
-      fileMagic: new Uint8Array([0x23, 0x21, 0x41, 0x4d, 0x52, 0x2d, 0x57, 0x42, 0x0a]) // #!AMR-WB\n
+      fileMagic: new Uint8Array([0x23, 0x21, 0x41, 0x4d, 0x52, 0x2d, 0x57, 0x42, 0x0a]), // #!AMR-WB\n
+      docUrl: 'https://www.3gpp.org/ftp/Specs/archive/26_series/26.171/',
+      docTitle: '3GPP TS 26.171 / ITU-T G.722.2',
+      description: '3GPP TS 26.171 / ITU-T G.722.2: Adaptive Multi-Rate Wideband HD Voice codec (16 kHz, 6.6–23.85 kbps). Standard for 3G/VoLTE HD Voice.'
     });
 
     // 7. EVS (3GPP TS 26.445 Enhanced Voice Services)
@@ -195,7 +216,10 @@ export class CodecProfileRegistry {
       fileExtension: 'evs',
       filenameTemplate: '{base}.EVS{band}r{rate}{dtx}',
       fileMagic: new Uint8Array([0x23, 0x21, 0x45, 0x56, 0x53, 0x5f, 0x4d, 0x43, 0x31, 0x2e, 0x30, 0x0a]), // #!EVS_MC1.0\n
-      channelCountHeader: true
+      channelCountHeader: true,
+      docUrl: 'https://www.3gpp.org/ftp/Specs/archive/26_series/26.445/',
+      docTitle: '3GPP TS 26.445',
+      description: '3GPP TS 26.445: Enhanced Voice Services (EVS) for VoLTE/5G supporting NB, WB, SWB, and FB up to 48 kHz. State-of-the-art telecom fidelity.'
     });
 
     // 8. G.729 / G.729A
@@ -212,7 +236,10 @@ export class CodecProfileRegistry {
       supportsDtx: true,
       defaultDtx: false,
       fileExtension: '729',
-      filenameTemplate: '{base}.729'
+      filenameTemplate: '{base}.729',
+      docUrl: 'https://www.itu.int/rec/T-REC-G.729',
+      docTitle: 'ITU-T G.729',
+      description: 'ITU-T G.729: Coding of speech at 8 kbps using CS-ACELP (10 ms frames, 8 kHz). High-efficiency bandwidth-saving toll codec.'
     });
 
     // 9. iLBC (RFC 3951 Internet Low Bitrate Codec)
@@ -230,7 +257,10 @@ export class CodecProfileRegistry {
       supportsDtx: false,
       defaultDtx: false,
       fileExtension: 'ilbc',
-      filenameTemplate: '{base}.ilbc'
+      filenameTemplate: '{base}.ilbc',
+      docUrl: 'https://www.rfc-editor.org/rfc/rfc3951',
+      docTitle: 'IETF RFC 3951',
+      description: 'IETF RFC 3951: Internet Low Bitrate Codec for robust speech communication over IP with packet loss resilience.'
     });
 
     // 10. Opus (RFC 6716)
@@ -251,7 +281,10 @@ export class CodecProfileRegistry {
       supportsDtx: true,
       defaultDtx: false,
       fileExtension: 'opus',
-      filenameTemplate: '{base}.opus'
+      filenameTemplate: '{base}.opus',
+      docUrl: 'https://www.rfc-editor.org/rfc/rfc6716',
+      docTitle: 'IETF RFC 6716',
+      description: 'IETF RFC 6716: Interactive audio codec combining Skype SILK and Xiph CELT from 6 to 510 kbps.'
     });
   }
 

@@ -21,6 +21,8 @@ import { Mp4BoxReader } from '../src/audio/Mp4BoxReader.ts';
 import { CodecProfileRegistry } from '../src/codec/CodecProfileRegistry.ts';
 import { RawClipPackager } from '../src/encoders/RawClipPackager.ts';
 import { AudioPreprocessor } from '../src/codec/AudioPreprocessor.ts';
+import { WavExporter } from '../src/media/WavExporter.ts';
+import { WavParser } from '../src/audio/WavParser.ts';
 
 function computeSnr(original: Int16Array | Float32Array, reconstructed: Int16Array | Float32Array, skipStart = 0): number {
   const len = Math.min(original.length, reconstructed.length);
@@ -383,6 +385,92 @@ describe('Phase 2: Codec Encoders & Raw Clip Processing Pipeline', () => {
     const sidFrames = G729Encoder.encode(silence, { dtx: true });
     assert.strictEqual(sidFrames.length, 2);
     assert.strictEqual(sidFrames[0].length, 2, 'G.729 Annex B SID frame must be 2 bytes');
+  });
+
+  it('G.722 encodes and decodes smoothly without high-frequency comb or choppy amplitude artifacts', () => {
+    const sampleRate = 16000;
+    const n = 16000; // 1 second of audio
+    const pcm = new Int16Array(n);
+    for (let i = 0; i < n; i++) {
+      // Speech vowel formant combination: 250 Hz fundamental + 1200 Hz + 2400 Hz
+      pcm[i] = Math.round(
+        8000 * Math.sin((2 * Math.PI * 250 * i) / sampleRate) +
+        4000 * Math.sin((2 * Math.PI * 1200 * i) / sampleRate) +
+        2000 * Math.sin((2 * Math.PI * 2400 * i) / sampleRate)
+      );
+    }
+
+    const enc = G722Encoder.encode(pcm, 8);
+    const dec = G722Decoder.decodeG722(enc, 8);
+    assert.strictEqual(dec.length, n);
+
+    // Compute high-frequency roughness ratio (energy of sample-to-sample difference vs total energy)
+    let origHf = 0, origTot = 0;
+    let decHf = 0, decTot = 0;
+    for (let i = 100; i < n - 100; i++) {
+      const dOrig = pcm[i] - pcm[i - 1];
+      origHf += dOrig * dOrig;
+      origTot += pcm[i] * pcm[i];
+
+      const dDec = dec[i] - dec[i - 1];
+      decHf += dDec * dDec;
+      decTot += dec[i] * dec[i];
+    }
+    const origRoughness = origHf / (origTot || 1);
+    const decRoughness = decHf / (decTot || 1);
+    const roughnessDelta = Math.abs(decRoughness - origRoughness);
+    assert.ok(roughnessDelta < 0.01, `Expected reconstructed roughness to match original within 0.01, got delta ${roughnessDelta.toFixed(6)}`);
+
+    // Cross correlation accounting for 24-sample QMF delay
+    const delay = 24;
+    let num = 0, den1 = 0, den2 = 0;
+    for (let i = 100; i < n - delay; i++) {
+      const orig = pcm[i];
+      const recon = dec[i + delay];
+      num += orig * recon;
+      den1 += orig * orig;
+      den2 += recon * recon;
+    }
+    const corr = num / Math.sqrt(den1 * den2);
+    assert.ok(corr > 0.80, `Expected high speech correlation > 0.80, got ${corr.toFixed(3)}`);
+  });
+
+  it('CodecProfileRegistry defines valid documentation links and descriptions for all telephony profiles', () => {
+    const requiredProfiles = ['g711u', 'g711a', 'g722', 'g726', 'amr-nb', 'amr-wb', 'evs', 'g729'];
+    for (const id of requiredProfiles) {
+      const profile = CodecProfileRegistry.get(id);
+      assert.ok(profile, `Profile ${id} must exist in registry`);
+      assert.ok(profile.docUrl && profile.docUrl.startsWith('http'), `Profile ${id} must have a valid HTTP docUrl`);
+      assert.ok(profile.docTitle && profile.docTitle.length > 0, `Profile ${id} must have a docTitle`);
+      assert.ok(profile.description && profile.description.length > 10, `Profile ${id} must have an explanatory description`);
+    }
+  });
+
+  it('Track A preprocessed audio produces valid 16-bit linear PCM WAV bitstream for download', () => {
+    const sampleRate = 16000;
+    const numSamples = 16000;
+    const pcm16 = new Int16Array(numSamples);
+    for (let i = 0; i < numSamples; i++) {
+      pcm16[i] = Math.round(14000 * Math.sin((2 * Math.PI * 440 * i) / sampleRate));
+    }
+
+    const wavBytes = WavExporter.encodeWav([pcm16], sampleRate, 16);
+    assert.ok(wavBytes.length > 44, 'WAV file must include 44-byte RIFF header plus payload');
+    assert.strictEqual(wavBytes[0], 0x52); // 'R'
+    assert.strictEqual(wavBytes[1], 0x49); // 'I'
+    assert.strictEqual(wavBytes[2], 0x46); // 'F'
+    assert.strictEqual(wavBytes[3], 0x46); // 'F'
+
+    // Verify parsed WAV matches original pcm16 samples exactly
+    const parsed = WavParser.parse(wavBytes);
+    assert.strictEqual(parsed.sampleRate, sampleRate);
+    assert.strictEqual(parsed.numChannels, 1);
+    assert.strictEqual(parsed.channelData[0].length, numSamples);
+
+    for (let i = 0; i < numSamples; i++) {
+      const origNormalized = pcm16[i] / 32768.0;
+      assert.ok(Math.abs(parsed.channelData[0][i] - origNormalized) < 1e-4);
+    }
   });
 
 });

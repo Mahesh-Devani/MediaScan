@@ -85,6 +85,17 @@ MediaScan is a high-performance, browser-native web application for analyzing, v
   - Voice Manager & Upstream Fetcher: One-click fetch and browser cache update directly from official HuggingFace Piper releases.
   - Custom voice loading: Import user-supplied `.onnx` and `.onnx.json` models dynamically in memory.
   - Direct handoff to Codec Converter for single-click synthesis-to-encoding pipelines.
+- **Audio Editor (PCM)**:
+  - GoldWave-style non-destructive audio editing using an immutable piece-table edit list ($O(\text{edits})$ manipulation with zero unnecessary sample copies).
+  - Multi-clip tab management: open multiple WAV (8/16/24/32-bit int, 32-bit float) and raw PCM files; volatile in-memory sessions with zero disk writes.
+  - Multi-resolution min/max peak pyramids (powers-of-4) for 60 fps panning and zooming from entire file view down to individual sample dots.
+  - Core edit operations: Cut (`Ctrl+X`), Copy (`Ctrl+C`), Paste (`Ctrl+V`), Paste Replace, Paste New Clip (`Ctrl+Shift+V`), Delete (`Del`), Crop / Trim, Silence Selection, and unlimited Undo / Redo (`Ctrl+Z` / `Ctrl+Y`) within a memory cap.
+  - App-wide shared clipboard with automatic resampling and channel adaptation notices when combining audio of different rates or channel layouts.
+  - Mix and Merge tools: Paste-Mix dialog (Add, Replace, Crossfade modes, Gain A/B sliders, timeline offsets) with automatic clipping prediction and auto-attenuation / soft-knee limiting.
+  - DSP & Normalization: Linear & dB gain adjustments, Peak dBFS normalization (-1.0 dBFS), Active Speech Loudness normalization (ITU-T P.56 / -26 dBov RTP telephony standard), Linear/S-curve fades, Polarity inversion, and Time reversal.
+  - Telephony signal generators: Pure sine waves, ITU-T Q.23 DTMF digits, Call-Progress tones (Dial, Ringback, Busy, Reorder), and Noise injection (White/Pink) at calibrated target SNR.
+  - Direct seamless hand-offs: Send active clip or selection directly to Codec Converter, DNSMOS Speech Quality Tool, or SNR analysis; and "Open in Editor" shortcuts directly from Codec Converter inputs, TTS synthesis outputs, and decoded RTP streams.
+  - Keyboard shortcuts: `Space` (Play/Pause), `Shift+Space` (Play Sel), `Ctrl+X/C/V/Z/Y`, `Del`, `Ctrl+A`, `+`/`-` (Zoom), `Home`/`End`, `Ctrl+S` (Export WAV).
 
 ---
 

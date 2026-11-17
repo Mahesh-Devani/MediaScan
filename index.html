@@ -937,6 +937,7 @@
           <div style="display: flex; gap: 8px;">
             <button class="btn btn-sm clipstudio-subtab active" data-subtab="convert" style="padding: 5px 14px; font-size: 12px; font-weight: 600;">🔄 Codec Converter</button>
             <button class="btn btn-sm clipstudio-subtab" data-subtab="tts" style="padding: 5px 14px; font-size: 12px; font-weight: 600;">🗣️ Text-to-Speech</button>
+            <button class="btn btn-sm clipstudio-subtab" data-subtab="editor" style="padding: 5px 14px; font-size: 12px; font-weight: 600;">✂️ Audio Editor</button>
           </div>
         </div>
 
@@ -955,7 +956,10 @@
 
           <!-- Input Summary Card -->
           <div id="clipstudio-input-summary-card" style="display: none; background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: 6px; padding: 12px 16px; margin-bottom: 16px;">
-            <div style="font-size: 12px; font-weight: 700; color: #7aa2f7; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">Input Audio Telemetry</div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+              <div style="font-size: 12px; font-weight: 700; color: #7aa2f7; text-transform: uppercase; letter-spacing: 0.5px;">Input Audio Telemetry</div>
+              <button class="btn btn-ctrl-sec" id="btn-cs-input-to-editor" style="padding: 3px 10px; font-size: 11px; font-weight: 600;">✂️ Open in Audio Editor</button>
+            </div>
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; font-size: 12px;">
               <div><span style="color: var(--text-dim);">File:</span> <strong id="cs-input-filename">-</strong></div>
               <div><span style="color: var(--text-dim);">Format:</span> <strong id="cs-input-format">-</strong></div>
@@ -971,44 +975,54 @@
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px;">
               <!-- Target Codec -->
               <div>
-                <label style="display: block; font-size: 12px; font-weight: 600; color: #fff; margin-bottom: 6px;">Target Codec</label>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                  <label style="font-size: 12px; font-weight: 600; color: #fff;" title="Select target telecom or media voice codec">Target Codec</label>
+                  <a id="cs-codec-spec-link" href="https://www.itu.int/rec/T-REC-G.722" target="_blank" rel="noopener noreferrer" style="font-size: 11px; color: #7aa2f7; text-decoration: none;" title="Open official standard specification in new tab">[Specs ↗]</a>
+                </div>
                 <select id="cs-codec-select" style="width: 100%; padding: 6px 10px; font-size: 12px; background: var(--bg-secondary); border: 1px solid var(--border); color: #fff; border-radius: 4px;"></select>
+                <div id="cs-codec-desc-text" style="font-size: 11px; color: var(--text-dim); margin-top: 5px; line-height: 1.3;">-</div>
               </div>
 
               <!-- Mode / Bitrate -->
               <div>
-                <label style="display: block; font-size: 12px; font-weight: 600; color: #fff; margin-bottom: 6px;">Operating Mode / Bitrate</label>
+                <label style="display: block; font-size: 12px; font-weight: 600; color: #fff; margin-bottom: 6px;" title="Codec operating bitrate and mode. Higher bitrates offer greater audio fidelity; lower bitrates minimize bandwidth consumption.">Operating Mode / Bitrate</label>
                 <select id="cs-mode-select" style="width: 100%; padding: 6px 10px; font-size: 12px; background: var(--bg-secondary); border: 1px solid var(--border); color: #fff; border-radius: 4px;"></select>
+                <div style="font-size: 11px; color: var(--text-dim); margin-top: 5px; line-height: 1.3;">Sets frame payload size, compression ratio, and bit allocation.</div>
               </div>
 
               <!-- Channel Selection -->
               <div>
-                <label style="display: block; font-size: 12px; font-weight: 600; color: #fff; margin-bottom: 6px;">Channel Selection</label>
+                <label style="display: block; font-size: 12px; font-weight: 600; color: #fff; margin-bottom: 6px;" title="Channel extraction or downmix. Telephony speech codecs operate in single-channel mono.">Channel Selection</label>
                 <select id="cs-channel-select" style="width: 100%; padding: 6px 10px; font-size: 12px; background: var(--bg-secondary); border: 1px solid var(--border); color: #fff; border-radius: 4px;">
                   <option value="mix">Mono Downmix</option>
                 </select>
+                <div style="font-size: 11px; color: var(--text-dim); margin-top: 5px; line-height: 1.3;">Downmixes stereo to mono or selects an individual caller leg.</div>
               </div>
             </div>
 
             <!-- DTX & Preprocessing Toggles -->
             <div style="display: flex; flex-wrap: wrap; gap: 16px; align-items: center; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 12px; font-size: 12px;">
-              <label id="cs-lbl-dtx" style="display: flex; align-items: center; gap: 6px; color: var(--text-dim); cursor: pointer;" title="Discontinuous Transmission: Generates SID comfort noise updates during silence">
+              <label id="cs-lbl-dtx" style="display: flex; align-items: center; gap: 6px; color: var(--text-dim); cursor: pointer;" title="Discontinuous Transmission (RFC 4867 / 3GPP): halts packet transmission during voice pauses and generates periodic Silence Insertion Descriptor (SID) comfort noise updates to conserve bandwidth.">
                 <input type="checkbox" id="cs-chk-dtx"> <strong>Enable DTX (Silence Suppression)</strong>
+                <a href="https://en.wikipedia.org/wiki/Discontinuous_transmission" target="_blank" rel="noopener noreferrer" style="font-size: 11px; color: #7aa2f7; text-decoration: none;" title="Open Discontinuous Transmission documentation in new tab">[DTX ↗]</a>
               </label>
 
-              <label style="display: flex; align-items: center; gap: 6px; color: var(--text-dim); cursor: pointer;" title="DC Blocker filter to center the waveform at 0">
+              <label style="display: flex; align-items: center; gap: 6px; color: var(--text-dim); cursor: pointer;" title="DC Blocker filter: Centers the waveform at 0.0 amplitude by subtracting mean DC offset, avoiding asymmetric clipping distortion.">
                 <input type="checkbox" id="cs-chk-dc" checked> Remove DC Offset
+                <a href="https://en.wikipedia.org/wiki/DC_bias" target="_blank" rel="noopener noreferrer" style="font-size: 11px; color: #7aa2f7; text-decoration: none;" title="Open DC Bias documentation in new tab">[DC ↗]</a>
               </label>
 
-              <label style="display: flex; align-items: center; gap: 6px; color: var(--text-dim); cursor: pointer;" title="70 Hz 2nd order Butterworth high-pass filter to remove low-frequency rumble">
+              <label style="display: flex; align-items: center; gap: 6px; color: var(--text-dim); cursor: pointer;" title="ITU-T G.113 compliant 2nd-order Butterworth high-pass filter: Cuts sub-audible frequencies below 70 Hz to suppress microphone rumble and 50/60 Hz power-grid hum.">
                 <input type="checkbox" id="cs-chk-highpass"> 70 Hz Telecom High-pass
+                <a href="https://www.itu.int/rec/T-REC-G.113" target="_blank" rel="noopener noreferrer" style="font-size: 11px; color: #7aa2f7; text-decoration: none;" title="Open ITU-T G.113 Transmission Impairments documentation in new tab">[G.113 ↗]</a>
               </label>
 
-              <label style="display: flex; align-items: center; gap: 6px; color: var(--text-dim); cursor: pointer;" title="Normalize audio to -1.0 dBFS peak">
+              <label style="display: flex; align-items: center; gap: 6px; color: var(--text-dim); cursor: pointer;" title="Peak Normalization: Linearly scales signal so maximum absolute peak reaches -1.0 dBFS (approx 89.1% full scale), preventing inter-sample clipping during codec compression.">
                 <input type="checkbox" id="cs-chk-norm" checked> Peak Normalize (-1.0 dBFS)
+                <a href="https://en.wikipedia.org/wiki/Audio_normalization" target="_blank" rel="noopener noreferrer" style="font-size: 11px; color: #7aa2f7; text-decoration: none;" title="Open Audio Normalization documentation in new tab">[Norm ↗]</a>
               </label>
 
-              <label style="display: flex; align-items: center; gap: 6px; color: var(--text-dim); cursor: pointer;" title="Trim leading and trailing silence">
+              <label style="display: flex; align-items: center; gap: 6px; color: var(--text-dim); cursor: pointer;" title="Trim Silence: Gates and cuts leading and trailing silence below -50 dBFS threshold for crisp prompt playback.">
                 <input type="checkbox" id="cs-chk-trim"> Trim Silence
               </label>
             </div>
@@ -1016,13 +1030,13 @@
             <!-- Custom Base Name & Filename Preview -->
             <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 12px;">
               <div style="display: flex; align-items: center; gap: 10px; flex: 1; min-width: 260px;">
-                <span style="font-size: 12px; color: var(--text-dim);">Base Name:</span>
+                <span style="font-size: 12px; color: var(--text-dim);" title="Base identifier used when constructing target filename">Base Name:</span>
                 <input type="text" id="cs-custom-basename" placeholder="e.g. speech" style="padding: 5px 10px; font-size: 12px; background: var(--bg-secondary); border: 1px solid var(--border); color: #fff; border-radius: 4px; width: 140px;">
                 <span style="font-size: 12px; color: var(--text-dim);">&rarr; Target Filename:</span>
-                <span id="cs-filename-preview" style="font-family: monospace; font-size: 13px; font-weight: 700; color: #2ac3de; background: rgba(42, 195, 222, 0.1); padding: 3px 8px; border-radius: 4px;">speech.raw</span>
+                <span id="cs-filename-preview" style="font-family: monospace; font-size: 13px; font-weight: 700; color: #2ac3de; background: rgba(42, 195, 222, 0.1); padding: 3px 8px; border-radius: 4px;" title="Target raw filename preview based on telephony clip naming conventions">speech.raw</span>
               </div>
 
-              <button class="btn btn-primary" id="btn-clipstudio-encode" disabled style="padding: 7px 20px; font-size: 13px; font-weight: 700;">⚡ Encode Raw Clip</button>
+              <button class="btn btn-primary" id="btn-clipstudio-encode" disabled style="padding: 7px 20px; font-size: 13px; font-weight: 700;" title="Encode the loaded audio clip into the selected telephony codec bitstream">⚡ Encode Raw Clip</button>
             </div>
           </div>
 
@@ -1031,10 +1045,10 @@
             <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 12px;">
               <div style="display: flex; align-items: center; gap: 8px;">
                 <span style="font-size: 16px;">✅</span>
-                <strong style="color: #fff; font-size: 14px;">Encoded Output:</strong>
+                <strong id="cs-res-track-label" style="color: #fff; font-size: 14px;">Encoded Output [B]:</strong>
                 <span id="cs-res-filename" style="font-family: monospace; color: #7aa2f7; font-weight: 700;">-</span>
               </div>
-              <button class="btn btn-primary" id="btn-clipstudio-download" style="padding: 6px 16px; font-size: 12px;">⬇ Download Raw Clip</button>
+              <button class="btn btn-primary" id="btn-clipstudio-download" style="padding: 6px 16px; font-size: 12px;" title="Download active monitored track">⬇ Download Raw Clip [B]</button>
             </div>
 
             <!-- Stats Bar -->
@@ -1050,22 +1064,22 @@
             <div style="background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: 6px; padding: 14px;">
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 10px;">
                 <div style="display: flex; align-items: center; gap: 10px;">
-                  <button class="btn btn-sm btn-primary" id="btn-cs-player-play" style="padding: 4px 14px; font-size: 12px;">▶ Play</button>
+                  <button class="btn btn-sm btn-primary" id="btn-cs-player-play" style="padding: 4px 14px; font-size: 12px;" title="Play or pause audio playback">▶ Play</button>
                   <span id="cs-player-time" style="font-family: monospace; font-size: 12px; color: var(--text-dim);">0:00.0 / 0:00.0</span>
                 </div>
 
                 <!-- Track A / Track B Switcher -->
                 <div style="display: flex; align-items: center; gap: 8px;">
-                  <span style="font-size: 12px; color: var(--text-dim); font-weight: 600;">Monitor:</span>
+                  <span style="font-size: 12px; color: var(--text-dim); font-weight: 600;" title="Toggle between preprocessed input audio [A] and codec encoded output [B]">Monitor:</span>
                   <div style="display: inline-flex; border: 1px solid var(--border); border-radius: 4px; overflow: hidden;">
-                    <button class="btn btn-sm" id="btn-cs-track-a" style="padding: 4px 12px; font-size: 11px; border: none; border-radius: 0; background: var(--bg-secondary); color: #7aa2f7;">[A] Original</button>
-                    <button class="btn btn-sm active" id="btn-cs-track-b" style="padding: 4px 12px; font-size: 11px; border: none; border-radius: 0; background: #9ece6a; color: #16161e; font-weight: 700;">[B] Encoded</button>
+                    <button class="btn btn-sm" id="btn-cs-track-a" style="padding: 4px 12px; font-size: 11px; border: none; border-radius: 0; background: var(--bg-secondary); color: #7aa2f7;" title="Monitor [A] Original preprocessed audio (16-bit linear PCM). Download button will download this input WAV.">[A] Original</button>
+                    <button class="btn btn-sm active" id="btn-cs-track-b" style="padding: 4px 12px; font-size: 11px; border: none; border-radius: 0; background: #9ece6a; color: #16161e; font-weight: 700;" title="Monitor [B] Encoded/decoded reconstructed audio. Download button will download the raw encoded clip.">[B] Encoded</button>
                   </div>
                 </div>
               </div>
 
               <!-- Interactive Waveform Canvas -->
-              <canvas id="cs-waveform-canvas" width="700" height="70" style="width: 100%; height: 70px; border-radius: 4px; display: block; cursor: pointer;"></canvas>
+              <canvas id="cs-waveform-canvas" width="700" height="70" style="width: 100%; height: 70px; border-radius: 4px; display: block; cursor: pointer;" title="Click anywhere on waveform to seek"></canvas>
             </div>
           </div>
         </div>
@@ -1208,6 +1222,7 @@
               </div>
               <div style="display: flex; gap: 8px;">
                 <button class="btn btn-secondary" id="btn-tts-download-wav" style="padding: 6px 14px; font-size: 12px;">⬇ Export WAV</button>
+                <button class="btn btn-ctrl-sec" id="btn-tts-to-editor" style="padding: 6px 14px; font-size: 12px; font-weight: 600;">✂️ Open in Audio Editor</button>
                 <button class="btn btn-primary" id="btn-tts-handoff-convert" style="padding: 6px 16px; font-size: 12px; font-weight: 700;">⚡ Encode as Raw Clip &rarr;</button>
               </div>
             </div>
@@ -1246,6 +1261,112 @@
           </div>
         </div>
 
+        <!-- Subpanel 3: Audio Editor (PCM) -->
+        <div id="panel-clipstudio-editor" style="display: none;">
+          <div style="background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: 8px; padding: 16px; margin-bottom: 16px; display: flex; flex-direction: column; gap: 12px;">
+            
+            <!-- Top Action Bar & Clip Tabs -->
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; border-bottom: 1px solid rgba(255,255,255,0.06); padding-bottom: 10px;">
+              <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                <button class="btn btn-primary" id="btn-editor-open-file" style="padding: 5px 14px; font-size: 12px; font-weight: 600;">📂 Open WAV / PCM...</button>
+                <input type="file" id="cs-editor-file-input" multiple accept=".wav,.wave,.pcm,.raw,.sln,.s16le" style="display: none;">
+                <button class="btn btn-secondary" id="btn-editor-export-wav" style="padding: 5px 14px; font-size: 12px;">💾 Export WAV...</button>
+                
+                <div style="width: 1px; height: 18px; background: var(--border); margin: 0 4px;"></div>
+                
+                <!-- In-App Handoff Actions -->
+                <button class="btn btn-ctrl-sec" id="btn-editor-send-converter" style="padding: 5px 10px; font-size: 11px;" title="Send active clip or selection to Codec Converter">🔄 To Converter</button>
+                <button class="btn btn-ctrl-sec" id="btn-editor-send-dnsmos" style="padding: 5px 10px; font-size: 11px;" title="Evaluate active clip in DNSMOS Audio Tool">🧠 To DNSMOS</button>
+                <button class="btn btn-ctrl-sec" id="btn-editor-send-snr" style="padding: 5px 10px; font-size: 11px;" title="Analyze active clip in SNR Tool">📈 To SNR</button>
+                
+                <div id="cs-editor-tabs-container" style="display: flex; gap: 6px; align-items: center; margin-left: 8px; flex-wrap: wrap;"></div>
+              </div>
+              <div style="display: flex; gap: 12px; align-items: center;">
+                <button class="btn btn-ctrl-sec" id="btn-editor-shortcuts" style="padding: 4px 8px; font-size: 11px;" title="Keyboard shortcuts help (F1 / ?)">❓ Help</button>
+                <span id="cs-editor-memory-usage" style="color: var(--text-dim); font-size: 11px; font-family: monospace;">Mem: 0.0 MB / 500 MB</span>
+              </div>
+            </div>
+
+            <!-- Editing & DSP Action Toolbar -->
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; background: rgba(0,0,0,0.15); padding: 6px 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.06);">
+              <div style="display: flex; gap: 4px; align-items: center; flex-wrap: wrap;">
+                <!-- Edit operations -->
+                <button class="btn btn-ctrl-sec" id="btn-editor-cut" style="padding: 4px 9px; font-size: 11px;" title="Cut Selection (Ctrl+X)">✂️ Cut</button>
+                <button class="btn btn-ctrl-sec" id="btn-editor-copy" style="padding: 4px 9px; font-size: 11px;" title="Copy Selection (Ctrl+C)">📋 Copy</button>
+                <button class="btn btn-ctrl-sec" id="btn-editor-paste" style="padding: 4px 9px; font-size: 11px;" title="Paste from Clipboard (Ctrl+V)">📥 Paste</button>
+                <button class="btn btn-ctrl-sec" id="btn-editor-paste-new" style="padding: 4px 9px; font-size: 11px;" title="Paste into New Clip (Ctrl+Shift+V)">📋+ New</button>
+                <button class="btn btn-ctrl-sec" id="btn-editor-delete" style="padding: 4px 9px; font-size: 11px;" title="Delete Selection (Del)">❌ Del</button>
+                <button class="btn btn-ctrl-sec" id="btn-editor-trim" style="padding: 4px 9px; font-size: 11px;" title="Trim / Crop to Selection">✂️ Crop</button>
+                <button class="btn btn-ctrl-sec" id="btn-editor-silence" style="padding: 4px 9px; font-size: 11px;" title="Silence Selection">🤫 Silence</button>
+                
+                <div style="width: 1px; height: 16px; background: var(--border); margin: 0 4px;"></div>
+                
+                <!-- History -->
+                <button class="btn btn-ctrl-sec" id="btn-editor-undo" style="padding: 4px 9px; font-size: 11px;" title="Undo (Ctrl+Z)">↶ Undo</button>
+                <button class="btn btn-ctrl-sec" id="btn-editor-redo" style="padding: 4px 9px; font-size: 11px;" title="Redo (Ctrl+Y)">↷ Redo</button>
+
+                <div style="width: 1px; height: 16px; background: var(--border); margin: 0 4px;"></div>
+
+                <!-- DSP & Effects -->
+                <button class="btn btn-ctrl-sec" id="btn-editor-mix" style="padding: 4px 9px; font-size: 11px;" title="Paste-Mix / Merge Two Clips">🔀 Mix / Merge...</button>
+                <button class="btn btn-ctrl-sec" id="btn-editor-gain" style="padding: 4px 9px; font-size: 11px;" title="Gain & Amplify">🔊 Gain...</button>
+                <button class="btn btn-ctrl-sec" id="btn-editor-normalize" style="padding: 4px 9px; font-size: 11px;" title="Peak & Loudness (-26 dBov) Normalization">📊 Normalize...</button>
+                <button class="btn btn-ctrl-sec" id="btn-editor-fade-in" style="padding: 4px 8px; font-size: 11px;" title="Fade In Selection">📈 Fade In</button>
+                <button class="btn btn-ctrl-sec" id="btn-editor-fade-out" style="padding: 4px 8px; font-size: 11px;" title="Fade Out Selection">📉 Fade Out</button>
+                <button class="btn btn-ctrl-sec" id="btn-editor-reverse" style="padding: 4px 8px; font-size: 11px;" title="Reverse Audio in Time">🔄 Reverse</button>
+                <button class="btn btn-ctrl-sec" id="btn-editor-invert" style="padding: 4px 8px; font-size: 11px;" title="Invert Polarity (Phase Flip)">⚡ Invert</button>
+                
+                <div style="width: 1px; height: 16px; background: var(--border); margin: 0 4px;"></div>
+                
+                <!-- Telephony generator -->
+                <button class="btn btn-primary" id="btn-editor-telephony" style="padding: 4px 10px; font-size: 11px; font-weight: 600;" title="Generate DTMF, Tones, and Noise at Target SNR">📻 Generate / Telephony ▾</button>
+              </div>
+            </div>
+
+            <!-- Transport Toolbar -->
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; background: rgba(0,0,0,0.2); padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border);">
+              <div style="display: flex; gap: 6px; align-items: center;">
+                <button class="btn btn-secondary" id="btn-editor-play" style="padding: 5px 12px; font-size: 12px; font-weight: 600;">▶ Play</button>
+                <button class="btn btn-secondary" id="btn-editor-stop" style="padding: 5px 10px; font-size: 12px;">⏹ Stop</button>
+                <button class="btn btn-ctrl-sec" id="btn-editor-play-sel" style="padding: 5px 10px; font-size: 12px;" title="Play selected audio range only">▶ Sel</button>
+                <div style="width: 1px; height: 18px; background: var(--border); margin: 0 4px;"></div>
+                <button class="btn btn-ctrl-sec" id="btn-editor-zoom-in" style="padding: 4px 8px; font-size: 12px;" title="Zoom In (+)">🔍+</button>
+                <button class="btn btn-ctrl-sec" id="btn-editor-zoom-out" style="padding: 4px 8px; font-size: 12px;" title="Zoom Out (-)">🔍-</button>
+                <button class="btn btn-ctrl-sec" id="btn-editor-zoom-fit" style="padding: 4px 8px; font-size: 11px;" title="Fit entire clip">↔ Fit All</button>
+              </div>
+
+              <div style="display: flex; gap: 14px; align-items: center;">
+                <span id="cs-editor-transport-time" style="font-family: monospace; font-size: 12px; color: #7aa2f7; font-weight: 700;">00:00:00.000 / 00:00:00.000</span>
+              </div>
+            </div>
+
+            <!-- Waveform & Minimap Area -->
+            <div style="background: #111; border: 1px solid var(--border); border-radius: 6px; padding: 10px; display: flex; flex-direction: column; gap: 4px;">
+              <!-- Minimap Overview -->
+              <div style="font-size: 10px; color: var(--text-dim); display: flex; justify-content: space-between; margin-bottom: 2px;">
+                <span>Full Clip Overview (Minimap)</span>
+                <span>Drag to pan viewport</span>
+              </div>
+              <canvas id="cs-editor-minimap-canvas" width="1000" height="30" style="width: 100%; height: 30px; display: block; background: #13141c; border-radius: 4px; border: 1px solid rgba(255,255,255,0.06); cursor: pointer;"></canvas>
+
+              <!-- Timeline Ruler -->
+              <canvas id="cs-editor-ruler-canvas" width="1000" height="18" style="width: 100%; height: 18px; display: block; margin-top: 4px; background: #16161e;"></canvas>
+
+              <!-- Main Multi-Channel Waveform Canvas -->
+              <canvas id="cs-editor-waveform-canvas" width="1000" height="180" style="width: 100%; height: 180px; display: block; background: #16161e; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; cursor: crosshair;"></canvas>
+            </div>
+
+            <!-- Status Bar Footer -->
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 6px; padding: 8px 12px; font-size: 11px; font-family: monospace;">
+              <span id="cs-editor-status-format" style="color: #fff;">No clip open</span>
+              <span id="cs-editor-status-selection" style="color: #7aa2f7;">Sel: none</span>
+              <span id="cs-editor-status-levels" style="color: var(--text-dim);">Levels: --</span>
+              <span id="cs-editor-status-clipping" style="font-weight: 700; color: #9ece6a;">[ Clipping: OK ]</span>
+            </div>
+
+          </div>
+        </div>
+
         <!-- Voice Models Manager Modal -->
         <div id="tts-models-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 9999; justify-content: center; align-items: center; padding: 20px;">
           <div style="background: #1f2335; border: 1px solid var(--border); border-radius: 8px; width: 100%; max-width: 880px; max-height: 90vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
@@ -1269,6 +1390,266 @@
                 <button class="btn btn-primary" id="btn-tts-fetch-all" style="padding: 6px 14px; font-size: 12px;">⬇️ Fetch All Latest Models</button>
                 <button class="btn btn-secondary" id="btn-close-tts-models-modal-bottom" style="padding: 6px 14px; font-size: 12px;">Close</button>
               </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Audio Editor: Paste-Mix / Merge Modal -->
+        <div id="editor-mix-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 9999; justify-content: center; align-items: center; padding: 20px;">
+          <div style="background: #1f2335; border: 1px solid var(--border); border-radius: 8px; width: 100%; max-width: 600px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+            <div style="padding: 14px 18px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; background: #1a1b26;">
+              <h4 style="margin: 0; font-size: 14px; font-weight: 700; color: #fff;">🔀 Paste-Mix / Merge Audio</h4>
+              <button id="btn-close-editor-mix-modal" style="background: none; border: none; color: var(--text-dim); font-size: 20px; cursor: pointer;">&times;</button>
+            </div>
+            <div style="padding: 16px 20px; display: flex; flex-direction: column; gap: 14px; font-size: 12px;">
+              <div>
+                <label style="display: block; font-weight: 600; color: #fff; margin-bottom: 6px;">Source Clip (Audio B)</label>
+                <select id="editor-mix-source-select" style="width: 100%; padding: 6px 10px; background: var(--bg-secondary); border: 1px solid var(--border); color: #fff; border-radius: 4px;">
+                  <option value="clipboard">📋 Clipboard Content</option>
+                </select>
+              </div>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+                <div>
+                  <label style="display: block; font-weight: 600; color: #fff; margin-bottom: 6px;">Gain A (Original): <span id="editor-mix-lbl-gain-a">100%</span></label>
+                  <input type="range" id="editor-mix-rng-gain-a" min="0" max="200" value="100" style="width: 100%;">
+                </div>
+                <div>
+                  <label style="display: block; font-weight: 600; color: #fff; margin-bottom: 6px;">Gain B (Source): <span id="editor-mix-lbl-gain-b">100%</span></label>
+                  <input type="range" id="editor-mix-rng-gain-b" min="0" max="200" value="100" style="width: 100%;">
+                </div>
+              </div>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+                <div>
+                  <label style="display: block; font-weight: 600; color: #fff; margin-bottom: 6px;">Mode</label>
+                  <select id="editor-mix-mode-select" style="width: 100%; padding: 6px 10px; background: var(--bg-secondary); border: 1px solid var(--border); color: #fff; border-radius: 4px;">
+                    <option value="mix">Mix (Add signals)</option>
+                    <option value="replace">Replace / Overwrite</option>
+                    <option value="crossfade">Crossfade</option>
+                  </select>
+                </div>
+                <div>
+                  <label style="display: block; font-weight: 600; color: #fff; margin-bottom: 6px;">Clipping Safety Strategy</label>
+                  <select id="editor-mix-clipping-select" style="width: 100%; padding: 6px 10px; background: var(--bg-secondary); border: 1px solid var(--border); color: #fff; border-radius: 4px;">
+                    <option value="auto-reduce">Auto-Reduce Gain (-0.5 dBFS)</option>
+                    <option value="soft-limiter">Soft-Knee Limiter</option>
+                    <option value="leave">Allow Clipping / Hard Clamp</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label style="display: flex; align-items: center; gap: 8px; color: var(--text-dim); cursor: pointer;">
+                  <input type="checkbox" id="editor-mix-chk-extend" checked>
+                  <span>Extend target clip duration if source audio extends beyond end</span>
+                </label>
+              </div>
+              <div id="editor-mix-preview-badge" style="background: rgba(0,0,0,0.3); padding: 8px 12px; border-radius: 4px; border: 1px solid var(--border); color: var(--text-dim); font-family: monospace; font-size: 11px;">
+                Ready to mix at playhead cursor.
+              </div>
+            </div>
+            <div style="padding: 12px 20px; border-top: 1px solid var(--border); background: #1a1b26; display: flex; justify-content: flex-end; gap: 8px;">
+              <button class="btn btn-secondary" id="btn-editor-mix-cancel" style="padding: 6px 14px; font-size: 12px;">Cancel</button>
+              <button class="btn btn-primary" id="btn-editor-mix-apply" style="padding: 6px 16px; font-size: 12px; font-weight: 600;">🔀 Apply Mix</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Audio Editor: Gain / Amplify Modal -->
+        <div id="editor-gain-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 9999; justify-content: center; align-items: center; padding: 20px;">
+          <div style="background: #1f2335; border: 1px solid var(--border); border-radius: 8px; width: 100%; max-width: 460px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+            <div style="padding: 14px 18px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; background: #1a1b26;">
+              <h4 style="margin: 0; font-size: 14px; font-weight: 700; color: #fff;">🔊 Gain &amp; Amplify</h4>
+              <button id="btn-close-editor-gain-modal" style="background: none; border: none; color: var(--text-dim); font-size: 20px; cursor: pointer;">&times;</button>
+            </div>
+            <div style="padding: 16px 20px; display: flex; flex-direction: column; gap: 14px; font-size: 12px;">
+              <div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+                  <label style="font-weight: 600; color: #fff;">Adjust Gain (dB):</label>
+                  <span id="editor-gain-val-label" style="font-family: monospace; color: #7aa2f7; font-weight: 700;">+0.0 dB (100%)</span>
+                </div>
+                <input type="range" id="editor-gain-slider" min="-36" max="24" step="0.5" value="0" style="width: 100%;">
+              </div>
+              <div style="display: flex; gap: 6px; justify-content: center;">
+                <button class="btn btn-ctrl-sec" id="btn-gain-preset-m6" style="padding: 3px 8px; font-size: 11px;">-6 dB</button>
+                <button class="btn btn-ctrl-sec" id="btn-gain-preset-m3" style="padding: 3px 8px; font-size: 11px;">-3 dB</button>
+                <button class="btn btn-ctrl-sec" id="btn-gain-preset-zero" style="padding: 3px 8px; font-size: 11px;">0 dB</button>
+                <button class="btn btn-ctrl-sec" id="btn-gain-preset-p3" style="padding: 3px 8px; font-size: 11px;">+3 dB</button>
+                <button class="btn btn-ctrl-sec" id="btn-gain-preset-p6" style="padding: 3px 8px; font-size: 11px;">+6 dB</button>
+              </div>
+              <div style="font-size: 11px; color: var(--text-dim);">
+                Applies to active selection, or entire clip if nothing is selected.
+              </div>
+            </div>
+            <div style="padding: 12px 20px; border-top: 1px solid var(--border); background: #1a1b26; display: flex; justify-content: flex-end; gap: 8px;">
+              <button class="btn btn-secondary" id="btn-editor-gain-cancel" style="padding: 6px 14px; font-size: 12px;">Cancel</button>
+              <button class="btn btn-primary" id="btn-editor-gain-apply" style="padding: 6px 16px; font-size: 12px; font-weight: 600;">Apply Gain</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Audio Editor: Normalize Modal -->
+        <div id="editor-norm-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 9999; justify-content: center; align-items: center; padding: 20px;">
+          <div style="background: #1f2335; border: 1px solid var(--border); border-radius: 8px; width: 100%; max-width: 480px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+            <div style="padding: 14px 18px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; background: #1a1b26;">
+              <h4 style="margin: 0; font-size: 14px; font-weight: 700; color: #fff;">📊 Audio Normalization</h4>
+              <button id="btn-close-editor-norm-modal" style="background: none; border: none; color: var(--text-dim); font-size: 20px; cursor: pointer;">&times;</button>
+            </div>
+            <div style="padding: 16px 20px; display: flex; flex-direction: column; gap: 14px; font-size: 12px;">
+              <div>
+                <label style="display: flex; align-items: center; gap: 8px; color: #fff; cursor: pointer; margin-bottom: 8px;">
+                  <input type="radio" name="editor-norm-type" value="peak" checked>
+                  <strong>Peak Normalization</strong>
+                </label>
+                <div style="margin-left: 24px; display: flex; align-items: center; gap: 8px;">
+                  <span style="color: var(--text-dim);">Target Peak:</span>
+                  <input type="number" id="editor-norm-peak-target" value="-1.0" step="0.1" min="-30" max="0" style="width: 70px; padding: 4px 8px; background: var(--bg-secondary); border: 1px solid var(--border); color: #fff; border-radius: 4px;">
+                  <span style="color: var(--text-dim);">dBFS</span>
+                </div>
+              </div>
+              <div style="border-top: 1px solid rgba(255,255,255,0.06); padding-top: 12px;">
+                <label style="display: flex; align-items: center; gap: 8px; color: #fff; cursor: pointer; margin-bottom: 8px;">
+                  <input type="radio" name="editor-norm-type" value="loudness">
+                  <strong>Active Speech / Loudness Normalization (ITU-T P.56 / dBov)</strong>
+                </label>
+                <div style="margin-left: 24px; display: flex; align-items: center; gap: 8px;">
+                  <span style="color: var(--text-dim);">Target Level:</span>
+                  <input type="number" id="editor-norm-loudness-target" value="-26.0" step="0.5" min="-50" max="-10" style="width: 70px; padding: 4px 8px; background: var(--bg-secondary); border: 1px solid var(--border); color: #fff; border-radius: 4px;">
+                  <span style="color: var(--text-dim);">dBov (Standard RTP telephony convention)</span>
+                </div>
+              </div>
+            </div>
+            <div style="padding: 12px 20px; border-top: 1px solid var(--border); background: #1a1b26; display: flex; justify-content: flex-end; gap: 8px;">
+              <button class="btn btn-secondary" id="btn-editor-norm-cancel" style="padding: 6px 14px; font-size: 12px;">Cancel</button>
+              <button class="btn btn-primary" id="btn-editor-norm-apply" style="padding: 6px 16px; font-size: 12px; font-weight: 600;">Normalize</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Audio Editor: Telephony Signal Generator Modal -->
+        <div id="editor-telephony-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 9999; justify-content: center; align-items: center; padding: 20px;">
+          <div style="background: #1f2335; border: 1px solid var(--border); border-radius: 8px; width: 100%; max-width: 540px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+            <div style="padding: 14px 18px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; background: #1a1b26;">
+              <h4 style="margin: 0; font-size: 14px; font-weight: 700; color: #fff;">📻 Telephony Signal Generators &amp; Effects</h4>
+              <button id="btn-close-editor-telephony-modal" style="background: none; border: none; color: var(--text-dim); font-size: 20px; cursor: pointer;">&times;</button>
+            </div>
+            <div style="padding: 16px 20px; display: flex; flex-direction: column; gap: 14px; font-size: 12px;">
+              <div>
+                <label style="display: block; font-weight: 600; color: #fff; margin-bottom: 6px;">Signal Type</label>
+                <select id="editor-gen-type-select" style="width: 100%; padding: 6px 10px; background: var(--bg-secondary); border: 1px solid var(--border); color: #fff; border-radius: 4px;">
+                  <option value="sine">Pure Sine Tone (Frequency / Duration)</option>
+                  <option value="dtmf">ITU-T Q.23 DTMF Digits (0-9, *, #, A-D)</option>
+                  <option value="callprogress">Call Progress Tone (Dial, Ringback, Busy, Reorder)</option>
+                  <option value="noise-snr">Noise Injection at Target SNR (White / Pink)</option>
+                  <option value="silence">Silence</option>
+                </select>
+              </div>
+
+              <!-- Options container dynamically toggled -->
+              <div id="editor-gen-options-sine" style="display: flex; gap: 10px;">
+                <div style="flex: 1;">
+                  <label style="display: block; color: var(--text-dim); margin-bottom: 4px;">Frequency (Hz)</label>
+                  <input type="number" id="editor-gen-sine-freq" value="1000" min="20" max="20000" style="width: 100%; padding: 4px 8px; background: var(--bg-secondary); border: 1px solid var(--border); color: #fff; border-radius: 4px;">
+                </div>
+                <div style="flex: 1;">
+                  <label style="display: block; color: var(--text-dim); margin-bottom: 4px;">Duration (sec)</label>
+                  <input type="number" id="editor-gen-sine-dur" value="1.0" step="0.1" min="0.1" max="60" style="width: 100%; padding: 4px 8px; background: var(--bg-secondary); border: 1px solid var(--border); color: #fff; border-radius: 4px;">
+                </div>
+              </div>
+
+              <div id="editor-gen-options-dtmf" style="display: none; flex-direction: column; gap: 8px;">
+                <div>
+                  <label style="display: block; color: var(--text-dim); margin-bottom: 4px;">DTMF Digits</label>
+                  <input type="text" id="editor-gen-dtmf-digits" value="1234#" placeholder="e.g. 18005551212#" style="width: 100%; padding: 4px 8px; background: var(--bg-secondary); border: 1px solid var(--border); color: #fff; border-radius: 4px; font-family: monospace;">
+                </div>
+                <div style="display: flex; gap: 10px;">
+                  <div style="flex: 1;">
+                    <label style="display: block; color: var(--text-dim); margin-bottom: 4px;">Tone Duration (ms)</label>
+                    <input type="number" id="editor-gen-dtmf-tone-dur" value="100" min="20" max="1000" style="width: 100%; padding: 4px 8px; background: var(--bg-secondary); border: 1px solid var(--border); color: #fff; border-radius: 4px;">
+                  </div>
+                  <div style="flex: 1;">
+                    <label style="display: block; color: var(--text-dim); margin-bottom: 4px;">Inter-digit Pause (ms)</label>
+                    <input type="number" id="editor-gen-dtmf-silence-dur" value="50" min="0" max="1000" style="width: 100%; padding: 4px 8px; background: var(--bg-secondary); border: 1px solid var(--border); color: #fff; border-radius: 4px;">
+                  </div>
+                </div>
+              </div>
+
+              <div id="editor-gen-options-callprogress" style="display: none; flex-direction: column; gap: 8px;">
+                <div>
+                  <label style="display: block; color: var(--text-dim); margin-bottom: 4px;">Cadence &amp; Standard</label>
+                  <select id="editor-gen-cp-type" style="width: 100%; padding: 4px 8px; background: var(--bg-secondary); border: 1px solid var(--border); color: #fff; border-radius: 4px;">
+                    <option value="dial">Dial Tone (350 Hz + 440 Hz continuous)</option>
+                    <option value="ringback">Ringback Tone (440 Hz + 480 Hz, 2s on / 4s off)</option>
+                    <option value="busy">Busy Tone (480 Hz + 620 Hz, 0.5s on / 0.5s off)</option>
+                    <option value="reorder">Reorder / Fast Busy (480 Hz + 620 Hz, 0.25s on / 0.25s off)</option>
+                  </select>
+                </div>
+                <div>
+                  <label style="display: block; color: var(--text-dim); margin-bottom: 4px;">Duration (sec)</label>
+                  <input type="number" id="editor-gen-cp-dur" value="4.0" step="0.5" min="0.5" max="30" style="width: 100%; padding: 4px 8px; background: var(--bg-secondary); border: 1px solid var(--border); color: #fff; border-radius: 4px;">
+                </div>
+              </div>
+
+              <div id="editor-gen-options-noise" style="display: none; flex-direction: column; gap: 8px;">
+                <div style="display: flex; gap: 10px;">
+                  <div style="flex: 1;">
+                    <label style="display: block; color: var(--text-dim); margin-bottom: 4px;">Noise Color</label>
+                    <select id="editor-gen-noise-color" style="width: 100%; padding: 4px 8px; background: var(--bg-secondary); border: 1px solid var(--border); color: #fff; border-radius: 4px;">
+                      <option value="white">White Noise</option>
+                      <option value="pink">Pink Noise (1/f)</option>
+                    </select>
+                  </div>
+                  <div style="flex: 1;">
+                    <label style="display: block; color: var(--text-dim); margin-bottom: 4px;">Target SNR (dB)</label>
+                    <input type="number" id="editor-gen-noise-snr" value="15.0" step="1" min="-10" max="40" style="width: 100%; padding: 4px 8px; background: var(--bg-secondary); border: 1px solid var(--border); color: #fff; border-radius: 4px;">
+                  </div>
+                </div>
+                <span style="font-size: 11px; color: var(--text-dim);">Measures active speech level and injects calibrated noise into selection/clip.</span>
+              </div>
+
+              <div>
+                <label style="display: block; font-weight: 600; color: #fff; margin-bottom: 6px;">Placement</label>
+                <select id="editor-gen-dest-select" style="width: 100%; padding: 6px 10px; background: var(--bg-secondary); border: 1px solid var(--border); color: #fff; border-radius: 4px;">
+                  <option value="new-tab">📄 Create New Clip Tab</option>
+                  <option value="insert">Insert at Cursor</option>
+                  <option value="replace">Replace Selection</option>
+                </select>
+              </div>
+            </div>
+            <div style="padding: 12px 20px; border-top: 1px solid var(--border); background: #1a1b26; display: flex; justify-content: flex-end; gap: 8px;">
+              <button class="btn btn-secondary" id="btn-editor-gen-cancel" style="padding: 6px 14px; font-size: 12px;">Cancel</button>
+              <button class="btn btn-primary" id="btn-editor-gen-apply" style="padding: 6px 16px; font-size: 12px; font-weight: 600;">⚡ Generate Signal</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Audio Editor: Shortcuts Modal -->
+        <div id="editor-shortcuts-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 9999; justify-content: center; align-items: center; padding: 20px;">
+          <div style="background: #1f2335; border: 1px solid var(--border); border-radius: 8px; width: 100%; max-width: 520px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+            <div style="padding: 14px 18px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; background: #1a1b26;">
+              <h4 style="margin: 0; font-size: 14px; font-weight: 700; color: #fff;">⌨️ Audio Editor Keyboard Shortcuts</h4>
+              <button id="btn-close-editor-shortcuts-modal" style="background: none; border: none; color: var(--text-dim); font-size: 20px; cursor: pointer;">&times;</button>
+            </div>
+            <div style="padding: 16px 20px; overflow-y: auto; max-height: 70vh; font-size: 12px;">
+              <table style="width: 100%; border-collapse: collapse; font-family: monospace;">
+                <tbody>
+                  <tr style="border-bottom: 1px solid rgba(255,255,255,0.06);"><td style="padding: 6px 0; color: #7aa2f7; font-weight: 700;">Space</td><td style="color: #fff;">Toggle Play / Pause</td></tr>
+                  <tr style="border-bottom: 1px solid rgba(255,255,255,0.06);"><td style="padding: 6px 0; color: #7aa2f7; font-weight: 700;">Shift + Space</td><td style="color: #fff;">Play Selection Only</td></tr>
+                  <tr style="border-bottom: 1px solid rgba(255,255,255,0.06);"><td style="padding: 6px 0; color: #7aa2f7; font-weight: 700;">Ctrl + X</td><td style="color: #fff;">Cut Selection</td></tr>
+                  <tr style="border-bottom: 1px solid rgba(255,255,255,0.06);"><td style="padding: 6px 0; color: #7aa2f7; font-weight: 700;">Ctrl + C</td><td style="color: #fff;">Copy Selection to Clipboard</td></tr>
+                  <tr style="border-bottom: 1px solid rgba(255,255,255,0.06);"><td style="padding: 6px 0; color: #7aa2f7; font-weight: 700;">Ctrl + V</td><td style="color: #fff;">Paste at Cursor / Replace Sel</td></tr>
+                  <tr style="border-bottom: 1px solid rgba(255,255,255,0.06);"><td style="padding: 6px 0; color: #7aa2f7; font-weight: 700;">Ctrl + Shift + V</td><td style="color: #fff;">Paste into New Clip Tab</td></tr>
+                  <tr style="border-bottom: 1px solid rgba(255,255,255,0.06);"><td style="padding: 6px 0; color: #7aa2f7; font-weight: 700;">Del / Backspace</td><td style="color: #fff;">Delete Selection</td></tr>
+                  <tr style="border-bottom: 1px solid rgba(255,255,255,0.06);"><td style="padding: 6px 0; color: #7aa2f7; font-weight: 700;">Ctrl + A</td><td style="color: #fff;">Select Entire Clip</td></tr>
+                  <tr style="border-bottom: 1px solid rgba(255,255,255,0.06);"><td style="padding: 6px 0; color: #7aa2f7; font-weight: 700;">Ctrl + Z</td><td style="color: #fff;">Undo Last Edit</td></tr>
+                  <tr style="border-bottom: 1px solid rgba(255,255,255,0.06);"><td style="padding: 6px 0; color: #7aa2f7; font-weight: 700;">Ctrl + Y</td><td style="color: #fff;">Redo Edit</td></tr>
+                  <tr style="border-bottom: 1px solid rgba(255,255,255,0.06);"><td style="padding: 6px 0; color: #7aa2f7; font-weight: 700;">+ / -</td><td style="color: #fff;">Zoom In / Zoom Out</td></tr>
+                  <tr style="border-bottom: 1px solid rgba(255,255,255,0.06);"><td style="padding: 6px 0; color: #7aa2f7; font-weight: 700;">Mouse Wheel</td><td style="color: #fff;">Zoom (Ctrl + Wheel) or Pan</td></tr>
+                  <tr style="border-bottom: 1px solid rgba(255,255,255,0.06);"><td style="padding: 6px 0; color: #7aa2f7; font-weight: 700;">Home / End</td><td style="color: #fff;">Jump to Beginning / End</td></tr>
+                  <tr><td style="padding: 6px 0; color: #7aa2f7; font-weight: 700;">Ctrl + S</td><td style="color: #fff;">Export WAV File</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div style="padding: 12px 20px; border-top: 1px solid var(--border); background: #1a1b26; display: flex; justify-content: flex-end;">
+              <button class="btn btn-secondary" id="btn-close-editor-shortcuts-modal-bottom" style="padding: 6px 14px; font-size: 12px;">Close</button>
             </div>
           </div>
         </div>
@@ -1315,6 +1696,7 @@
           <span>Full Duration (Keep Silence)</span>
         </label>
 
+        <button class="btn btn-ctrl-sec" id="btn-player-to-editor" style="padding: 6px 12px; font-size: 12px;" title="Open active stream in Clip Studio Audio Editor">✂️ Open in Editor</button>
         <button class="btn btn-primary" id="btn-download-wav" style="padding: 6px 14px; font-size: 13px;">&#x2B07; Download WAV</button>
       </div>
     </div>

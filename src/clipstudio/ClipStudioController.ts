@@ -22,9 +22,11 @@ import { AmrDecoder } from '../decoders/AmrDecoder.ts';
 import { EvsEncoder } from '../encoders/EvsEncoder.ts';
 import { EvsDecoder } from '../decoders/EvsDecoder.ts';
 import { Mp4BoxReader } from '../audio/Mp4BoxReader.ts';
+import { WavExporter } from '../media/WavExporter.ts';
 import { TtsEngine, type VoiceMetadata, type TtsSynthesizeResult } from '../tts/TtsEngine.ts';
 import { RawAudioLoader, type LoadedAudio } from '../audio/RawAudioLoader.ts';
 import { ChannelSplitter } from '../audio/ChannelSplitter.ts';
+import { AudioEditorController } from './editor/AudioEditorController.ts';
 
 export class ClipStudioController {
   private static instance: ClipStudioController;
@@ -33,6 +35,12 @@ export class ClipStudioController {
   private currentInputBytes: Uint8Array | null = null;
   private currentPackagedClip: PackagedClip | null = null;
   private currentReconstructedPcm: Float32Array | null = null;
+
+  // Track A (preprocessed input) state
+  private currentTrackAPcm16: Int16Array | null = null;
+  private currentTrackAFloat: Float32Array | null = null;
+  private currentTrackAWavBytes: Uint8Array | null = null;
+  private currentTrackAFilename: string = '';
 
   // Web Audio A/B Player state
   private audioCtx: AudioContext | null = null;
@@ -68,6 +76,11 @@ export class ClipStudioController {
     this.setupConvertControls();
     this.setupPlayerControls();
     this.setupTtsControls();
+
+    const pEditor = document.getElementById('panel-clipstudio-editor');
+    if (pEditor) {
+      AudioEditorController.getInstance().init(pEditor);
+    }
   }
 
   private setupSubTabNavigation(): void {
@@ -79,9 +92,16 @@ export class ClipStudioController {
         const target = tab.getAttribute('data-subtab');
         const pConvert = document.getElementById('panel-clipstudio-convert');
         const pTts = document.getElementById('panel-clipstudio-tts');
+        const pEditor = document.getElementById('panel-clipstudio-editor');
         if (pConvert && pTts) {
           pConvert.style.display = target === 'convert' ? 'block' : 'none';
           pTts.style.display = target === 'tts' ? 'block' : 'none';
+          if (pEditor) {
+            pEditor.style.display = target === 'editor' ? 'block' : 'none';
+            if (target === 'editor') {
+              AudioEditorController.getInstance().renderAll();
+            }
+          }
         }
       });
     });
@@ -134,6 +154,11 @@ export class ClipStudioController {
         this.loadFile(files[0]);
       }
     });
+
+    const btnInputToEditor = document.getElementById('btn-cs-input-to-editor');
+    if (btnInputToEditor) {
+      btnInputToEditor.addEventListener('click', () => this.handleInputHandoffToEditor());
+    }
   }
 
   private async loadFile(file: File): Promise<void> {
@@ -217,6 +242,7 @@ export class ClipStudioController {
       const opt = document.createElement('option');
       opt.value = p.id;
       opt.textContent = `${p.name} (${p.bandwidth})`;
+      opt.title = p.description || p.name;
       sel.appendChild(opt);
     });
 
@@ -232,17 +258,30 @@ export class ClipStudioController {
     const selMode = document.getElementById('cs-mode-select') as HTMLSelectElement | null;
     const chkDtx = document.getElementById('cs-chk-dtx') as HTMLInputElement | null;
     const lblDtx = document.getElementById('cs-lbl-dtx');
+    const linkCodecSpec = document.getElementById('cs-codec-spec-link') as HTMLAnchorElement | null;
+    const txtCodecDesc = document.getElementById('cs-codec-desc-text');
 
     if (!selCodec || !selMode) return;
 
     const profile = CodecProfileRegistry.get(selCodec.value);
     if (!profile) return;
 
+    if (linkCodecSpec && profile.docUrl) {
+      linkCodecSpec.href = profile.docUrl;
+      linkCodecSpec.textContent = `[${profile.docTitle || 'Specs'} ↗]`;
+      linkCodecSpec.title = `Open ${profile.docTitle || profile.name} standard specification`;
+      linkCodecSpec.style.display = 'inline';
+    }
+    if (txtCodecDesc && profile.description) {
+      txtCodecDesc.textContent = profile.description;
+    }
+
     selMode.innerHTML = '';
     profile.modes.forEach((m, idx) => {
       const opt = document.createElement('option');
       opt.value = idx.toString();
       opt.textContent = `${m.bitrateKbps} kbps — ${m.description || m.rateLabel}`;
+      opt.title = `${m.description || m.rateLabel} (${m.bitrateKbps} kbps, payload: ${m.framePayloadBytes} bytes/frame)`;
       selMode.appendChild(opt);
     });
     selMode.selectedIndex = profile.defaultModeIndex;
@@ -520,6 +559,12 @@ export class ClipStudioController {
       bandwidth: profile.bandwidth,
     });
 
+    // Save Track A (Original preprocessed input) & Track B (Reconstructed decoded output)
+    this.currentTrackAPcm16 = prep.pcm16;
+    this.currentTrackAFloat = prep.pcmFloat;
+    this.currentTrackAFilename = `${base}_input.wav`;
+    this.currentTrackAWavBytes = WavExporter.encodeWav([prep.pcm16], profile.sampleRate, 16);
+
     this.currentPackagedClip = packaged;
     this.currentReconstructedPcm = reconstructedFloat;
 
@@ -570,15 +615,29 @@ export class ClipStudioController {
 
     if (btnDownload) {
       btnDownload.onclick = () => {
-        const blob = new Blob([packaged.data as BlobPart], { type: 'application/octet-stream' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = packaged.suggestedFilename;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
+        if (this.currentTrack === 'A') {
+          if (!this.currentTrackAWavBytes) return;
+          const blob = new Blob([this.currentTrackAWavBytes as BlobPart], { type: 'audio/wav' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = this.currentTrackAFilename || 'input.wav';
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        } else {
+          if (!this.currentPackagedClip) return;
+          const blob = new Blob([this.currentPackagedClip.data as BlobPart], { type: 'application/octet-stream' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = this.currentPackagedClip.suggestedFilename;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        }
       };
     }
   }
@@ -648,7 +707,7 @@ export class ClipStudioController {
       this.stopSourceOnly();
       this.playFrom(currentPos);
     } else {
-      const buffer = track === 'A' ? this.currentInputAudio?.channelData[0] : this.currentReconstructedPcm;
+      const buffer = track === 'A' ? this.currentTrackAFloat : this.currentReconstructedPcm;
       if (buffer) this.renderWaveform(buffer);
     }
   }
@@ -656,13 +715,55 @@ export class ClipStudioController {
   private updateTrackToggleButtons(): void {
     const btnA = document.getElementById('btn-cs-track-a');
     const btnB = document.getElementById('btn-cs-track-b');
+    const btnDownload = document.getElementById('btn-clipstudio-download') as HTMLButtonElement | null;
+    const elResLabel = document.getElementById('cs-res-track-label');
+    const elFilename = document.getElementById('cs-res-filename');
+
     if (btnA && btnB) {
       if (this.currentTrack === 'A') {
         btnA.classList.add('active');
+        btnA.style.background = '#7aa2f7';
+        btnA.style.color = '#16161e';
+        btnA.style.fontWeight = '700';
+
         btnB.classList.remove('active');
+        btnB.style.background = 'var(--bg-secondary)';
+        btnB.style.color = '#9ece6a';
+        btnB.style.fontWeight = 'normal';
+
+        if (btnDownload) {
+          btnDownload.textContent = '⬇ Download Input WAV [A]';
+          btnDownload.title = 'Download preprocessed 16-bit linear PCM WAV [A] before codec compression';
+        }
+        if (elResLabel) {
+          elResLabel.textContent = 'Preprocessed Input [A]:';
+        }
+        if (elFilename && this.currentTrackAFilename) {
+          elFilename.textContent = this.currentTrackAFilename;
+          elFilename.style.color = '#7aa2f7';
+        }
       } else {
         btnB.classList.add('active');
+        btnB.style.background = '#9ece6a';
+        btnB.style.color = '#16161e';
+        btnB.style.fontWeight = '700';
+
         btnA.classList.remove('active');
+        btnA.style.background = 'var(--bg-secondary)';
+        btnA.style.color = '#7aa2f7';
+        btnA.style.fontWeight = 'normal';
+
+        if (btnDownload) {
+          btnDownload.textContent = '⬇ Download Raw Clip [B]';
+          btnDownload.title = `Download encoded raw bitstream [B] (${this.currentPackagedClip?.suggestedFilename || ''})`;
+        }
+        if (elResLabel) {
+          elResLabel.textContent = 'Encoded Output [B]:';
+        }
+        if (elFilename && this.currentPackagedClip) {
+          elFilename.textContent = this.currentPackagedClip.suggestedFilename;
+          elFilename.style.color = '#9ece6a';
+        }
       }
     }
   }
@@ -681,7 +782,7 @@ export class ClipStudioController {
     const profile = CodecProfileRegistry.get(this.currentPackagedClip?.telemetry.codecId || '');
     const sampleRate = profile ? profile.sampleRate : 16000;
 
-    let pcm = this.currentTrack === 'A' ? this.currentInputAudio?.channelData[0] : this.currentReconstructedPcm;
+    let pcm = this.currentTrack === 'A' ? this.currentTrackAFloat : this.currentReconstructedPcm;
     if (!pcm || pcm.length === 0) return;
 
     const audioBuf = this.audioCtx.createBuffer(1, pcm.length, sampleRate);
@@ -738,7 +839,7 @@ export class ClipStudioController {
       this.animationFrameId = null;
     }
 
-    const pcm = this.currentTrack === 'A' ? this.currentInputAudio?.channelData[0] : this.currentReconstructedPcm;
+    const pcm = this.currentTrack === 'A' ? this.currentTrackAFloat : this.currentReconstructedPcm;
     if (pcm) this.renderWaveform(pcm, 0);
   }
 
@@ -763,7 +864,7 @@ export class ClipStudioController {
       this.stopSourceOnly();
       this.playFrom(clamped);
     } else {
-      const pcm = this.currentTrack === 'A' ? this.currentInputAudio?.channelData[0] : this.currentReconstructedPcm;
+      const pcm = this.currentTrack === 'A' ? this.currentTrackAFloat : this.currentReconstructedPcm;
       if (pcm) this.renderWaveform(pcm, clamped / (duration || 1));
     }
   }
@@ -784,7 +885,7 @@ export class ClipStudioController {
         elTime.textContent = `${this.formatTime(curTime)} / ${this.formatTime(duration)}`;
       }
 
-      const pcm = this.currentTrack === 'A' ? this.currentInputAudio?.channelData[0] : this.currentReconstructedPcm;
+      const pcm = this.currentTrack === 'A' ? this.currentTrackAFloat : this.currentReconstructedPcm;
       if (pcm) {
         this.renderWaveform(pcm, duration > 0 ? curTime / duration : 0);
       }
@@ -979,6 +1080,12 @@ export class ClipStudioController {
     // Handoff to Convert Panel
     if (btnHandoff) {
       btnHandoff.addEventListener('click', () => this.handleTtsHandoffToConvert());
+    }
+
+    // Handoff to Audio Editor
+    const btnTtsToEditor = document.getElementById('btn-tts-to-editor');
+    if (btnTtsToEditor) {
+      btnTtsToEditor.addEventListener('click', () => this.handleTtsHandoffToEditor());
     }
 
     this.setupTtsPlayerControls();
@@ -1312,6 +1419,69 @@ export class ClipStudioController {
 
     const btnEncode = document.getElementById('btn-clipstudio-encode') as HTMLButtonElement | null;
     if (btnEncode) btnEncode.disabled = false;
+  }
+
+  public switchToSubtab(target: 'convert' | 'tts' | 'editor'): void {
+    const subTabs = document.querySelectorAll('.clipstudio-subtab');
+    subTabs.forEach(tab => {
+      if (tab.getAttribute('data-subtab') === target) tab.classList.add('active');
+      else tab.classList.remove('active');
+    });
+
+    const pConvert = document.getElementById('panel-clipstudio-convert');
+    const pTts = document.getElementById('panel-clipstudio-tts');
+    const pEditor = document.getElementById('panel-clipstudio-editor');
+
+    if (pConvert) pConvert.style.display = target === 'convert' ? 'block' : 'none';
+    if (pTts) pTts.style.display = target === 'tts' ? 'block' : 'none';
+    if (pEditor) {
+      pEditor.style.display = target === 'editor' ? 'block' : 'none';
+      if (target === 'editor') {
+        AudioEditorController.getInstance().renderAll();
+      }
+    }
+  }
+
+  private handleTtsHandoffToEditor(): void {
+    if (!this.currentTtsResult) return;
+    const editor = AudioEditorController.getInstance();
+    editor.openFromChannelData(
+      [this.currentTtsResult.pcmFloat],
+      this.currentTtsResult.sampleRate,
+      `tts_${this.currentTtsResult.sampleRate}hz.wav`,
+      16
+    );
+    this.switchToSubtab('editor');
+  }
+
+  private handleInputHandoffToEditor(): void {
+    if (!this.currentInputAudio) return;
+    const editor = AudioEditorController.getInstance();
+    editor.openFromChannelData(
+      this.currentInputAudio.channelData,
+      this.currentInputAudio.sampleRate,
+      this.currentInputAudio.fileName,
+      16
+    );
+    this.switchToSubtab('editor');
+  }
+
+  public async loadFromExternalWav(wavBytes: Uint8Array, fileName: string): Promise<void> {
+    try {
+      this.currentInputBytes = wavBytes;
+      const loaded = await RawAudioLoader.load(wavBytes, fileName);
+      this.currentInputAudio = loaded;
+
+      this.switchToSubtab('convert');
+      this.displayInputSummary(loaded, wavBytes.length);
+      this.updateChannelSelector(loaded.numChannels);
+      this.updateFilenamePreview();
+
+      const btnEncode = document.getElementById('btn-clipstudio-encode') as HTMLButtonElement | null;
+      if (btnEncode) btnEncode.disabled = false;
+    } catch (err) {
+      console.error('[ClipStudio] Failed to load external audio into converter:', err);
+    }
   }
 
   // TTS Waveform & Audio Player

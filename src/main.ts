@@ -11,6 +11,7 @@ import { MosUiController } from './mos/MosUiController.ts';
 import { DnsmosUiController } from './dnsmos/DnsmosUiController.ts';
 import { DnsmosToolController } from './dnsmos/DnsmosToolController.ts';
 import { ClipStudioController } from './clipstudio/ClipStudioController.ts';
+import { AudioEditorController } from './clipstudio/editor/AudioEditorController.ts';
 import { VideoDecoderPlayer } from './video/VideoDecoderPlayer.ts';
 import { SrtpUiController } from './srtp/SrtpUiController.ts';
 import { SrtpKeyRegistry } from './srtp/SrtpKeyRegistry.ts';
@@ -969,6 +970,37 @@ chkFillSilence?.addEventListener('change', () => {
 btnDownloadWav.addEventListener('click', () => {
   if (activeStream) downloadSingleStreamWav(activeStream);
 });
+
+const btnPlayerToEditor = document.getElementById('btn-player-to-editor');
+if (btnPlayerToEditor) {
+  btnPlayerToEditor.addEventListener('click', async () => {
+    if (!activeStream || !pipelineResult) return;
+    try {
+      const fillSilence = chkFillSilence ? chkFillSilence.checked : true;
+      const decoded = await StreamAudioDecoder.decodeStream(activeStream, pipelineResult.dialogs, fillSilence);
+      if (decoded && decoded.pcm) {
+        const tabBtn = document.querySelector('[data-tab="tab-clip-studio"]') as HTMLElement | null;
+        if (tabBtn) tabBtn.click();
+
+        ClipStudioController.getInstance().switchToSubtab('editor');
+        const floatData = new Float32Array(decoded.pcm.length);
+        for (let i = 0; i < decoded.pcm.length; i++) {
+          floatData[i] = decoded.pcm[i] / 32768.0;
+        }
+
+        const editor = AudioEditorController.getInstance();
+        editor.openFromChannelData(
+          [floatData],
+          decoded.sampleRate,
+          `ssrc_${activeStream.ssrc}_${decoded.codec}.wav`,
+          16
+        );
+      }
+    } catch (err) {
+      console.error('[AudioEditor] Failed to open stream in editor:', err);
+    }
+  });
+}
 
 btnDownloadAllWav.addEventListener('click', async () => {
   if (!pipelineResult) return;
