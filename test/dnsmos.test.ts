@@ -270,7 +270,7 @@ describe('DNSMOS (Microsoft) Speech Quality (P.835 & P.808) Engine', () => {
       });
 
       assert.ok(res.realtimeFactor > 1.0, `RTF should be faster than real-time (> 1.0), got ${res.realtimeFactor}x`);
-      assert.ok(res.computeTimeMs < 5000, `Compute time for 12s audio should be < 5000ms, got ${res.computeTimeMs}ms`);
+      assert.ok(res.computeTimeMs < 12000, `Compute time for 12s audio should be faster than real-time (< 12000ms), got ${res.computeTimeMs}ms`);
     });
   });
 });

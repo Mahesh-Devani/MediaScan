@@ -500,7 +500,7 @@ export class ClipStudioController {
         reconstructedFloat = new Float32Array(decoded.pcm.length);
         for (let i = 0; i < decoded.pcm.length; i++) reconstructedFloat[i] = decoded.pcm[i] / 32768.0;
 
-      } else if (profile.id === 'evs' || profile.id === 'evs-nb' || profile.id === 'evs-wb') {
+      } else if (profile.id === 'evs' || profile.id === 'evs-nb' || profile.id === 'evs-wb' || profile.id === 'evs-swb' || profile.id.startsWith('evs')) {
         const isIo = typeof mode.modeId === 'string' && mode.modeId.startsWith('io_');
         const rawFrames = await EvsEncoder.encode(prep.pcm16, {
           sampleRate: profile.sampleRate,

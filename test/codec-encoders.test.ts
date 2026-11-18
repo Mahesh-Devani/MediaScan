@@ -207,6 +207,22 @@ describe('Phase 2: Codec Encoders & Raw Clip Processing Pipeline', () => {
     assert.strictEqual(packagedEvsNb.suggestedFilename, 'test_evs_nb.EVSNBr96');
     assert.strictEqual(packagedEvsNb.telemetry.sampleRate, 8000);
     assert.strictEqual(packagedEvsNb.telemetry.bandwidth, 'NB');
+
+    // 5. EVS-SWB
+    const evsSwbProfile = CodecProfileRegistry.get('evs-swb')!;
+    assert.ok(evsSwbProfile);
+    const evsSwbFrames = [new Uint8Array(62)]; // ToC 0x06 + 61 payload (24.4 kbps)
+    evsSwbFrames[0][0] = 0x06;
+    const packagedEvsSwb = RawClipPackager.package(evsSwbProfile, evsSwbFrames, {
+      baseFilename: 'test_evs_swb.wav',
+      modeRateLabel: '244',
+      dtxEnabled: false,
+      bandwidth: 'SWB',
+    });
+    assert.strictEqual(packagedEvsSwb.data.length, 16 + 62);
+    assert.strictEqual(packagedEvsSwb.suggestedFilename, 'test_evs_swb.EVSSWBr244');
+    assert.strictEqual(packagedEvsSwb.telemetry.sampleRate, 32000);
+    assert.strictEqual(packagedEvsSwb.telemetry.bandwidth, 'SWB');
   });
 
   it('AudioPreprocessor handles channel downmixing, resampling, DC removal, and duration adjustments', () => {
@@ -292,6 +308,24 @@ describe('Phase 2: Codec Encoders & Raw Clip Processing Pipeline', () => {
     const decodedNb = await EvsDecoder.decodePayloads(nbFrames, true, 8000);
     assert.strictEqual(decodedNb.sampleRate, 8000);
     assert.strictEqual(decodedNb.pcm.length, 800);
+
+    // 4. Primary 24.4 kbps Super-Wideband (32 kHz)
+    const pcm32k = new Int16Array(32000 * 0.1); // 100 ms @ 32 kHz = 5 frames
+    for (let i = 0; i < pcm32k.length; i++) {
+      pcm32k[i] = Math.round(10000 * Math.sin((2 * Math.PI * 400 * i) / 32000));
+    }
+    const swbFrames = await EvsEncoder.encode(pcm32k, {
+      sampleRate: 32000,
+      bitrateBps: 24400,
+      bandwidth: 'SWB',
+      dtx: false,
+    });
+    assert.strictEqual(swbFrames.length, 5, 'Must produce exactly 5 frames for 100ms SWB');
+    assert.strictEqual(swbFrames[0].length, 62);
+    assert.strictEqual(swbFrames[0][0], 0x06, 'ToC for primary 24.4 kbps SWB is 0x06');
+    const decodedSwb = await EvsDecoder.decodePayloads(swbFrames, true, 32000);
+    assert.strictEqual(decodedSwb.sampleRate, 32000);
+    assert.strictEqual(decodedSwb.pcm.length, 3200);
   });
 
   it('AmrNbEncoder encodes 8 kHz speech with RFC 4867 ToC and decodes bit-exact', async () => {
@@ -471,7 +505,7 @@ describe('Phase 2: Codec Encoders & Raw Clip Processing Pipeline', () => {
   });
 
   it('CodecProfileRegistry defines valid documentation links and descriptions for all telephony profiles', () => {
-    const requiredProfiles = ['g711u', 'g711a', 'g722', 'g726', 'amr-nb', 'amr-wb', 'evs', 'evs-nb', 'g729'];
+    const requiredProfiles = ['g711u', 'g711a', 'g722', 'g726', 'amr-nb', 'amr-wb', 'evs', 'evs-nb', 'evs-swb', 'g729'];
     for (const id of requiredProfiles) {
       const profile = CodecProfileRegistry.get(id);
       assert.ok(profile, `Profile ${id} must exist in registry`);

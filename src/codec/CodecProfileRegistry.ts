@@ -247,7 +247,37 @@ export class CodecProfileRegistry {
       channelCountHeader: true,
       docUrl: 'https://www.3gpp.org/ftp/Specs/archive/26_series/26.445/',
       docTitle: '3GPP TS 26.445',
-      description: '3GPP TS 26.445: Enhanced Voice Services (EVS) for VoLTE/5G supporting NB, WB, SWB, and FB up to 48 kHz. State-of-the-art telecom fidelity.'
+      description: '3GPP TS 26.445: Enhanced Voice Services (EVS) Wideband (16 kHz) operating from 5.9 to 128 kbps with AMR-WB IO compatibility.'
+    });
+
+    // 9. EVS-SWB (3GPP TS 26.445 Enhanced Voice Services Super-Wideband)
+    this.register({
+      id: 'evs-swb',
+      name: 'EVS (3GPP Enhanced Voice Services)',
+      sampleRate: 32000,
+      bandwidth: 'SWB',
+      frameDurationMs: 20,
+      modes: [
+        { modeId: 'evs_9_6',  bitrateKbps: 9.6,   rateLabel: '96',   framePayloadBytes: 24,  tocByte: 0x03, description: 'Primary 9.6 kbps' },
+        { modeId: 'evs_13_2', bitrateKbps: 13.2,  rateLabel: '132',  framePayloadBytes: 33,  tocByte: 0x04, description: 'Primary 13.2 kbps (Standard 5G/VoNR SWB)' },
+        { modeId: 'evs_16_4', bitrateKbps: 16.4,  rateLabel: '164',  framePayloadBytes: 41,  tocByte: 0x05, description: 'Primary 16.4 kbps' },
+        { modeId: 'evs_24_4', bitrateKbps: 24.4,  rateLabel: '244',  framePayloadBytes: 61,  tocByte: 0x06, description: 'Primary 24.4 kbps (High Fidelity SWB)' },
+        { modeId: 'evs_32_0', bitrateKbps: 32.0,  rateLabel: '320',  framePayloadBytes: 80,  tocByte: 0x07, description: 'Primary 32.0 kbps' },
+        { modeId: 'evs_48_0', bitrateKbps: 48.0,  rateLabel: '480',  framePayloadBytes: 120, tocByte: 0x08, description: 'Primary 48.0 kbps' },
+        { modeId: 'evs_64_0', bitrateKbps: 64.0,  rateLabel: '640',  framePayloadBytes: 160, tocByte: 0x09, description: 'Primary 64.0 kbps' },
+        { modeId: 'evs_96_0', bitrateKbps: 96.0,  rateLabel: '960',  framePayloadBytes: 240, tocByte: 0x0a, description: 'Primary 96.0 kbps' },
+        { modeId: 'evs_128_0',bitrateKbps: 128.0, rateLabel: '1280', framePayloadBytes: 320, tocByte: 0x0b, description: 'Primary 128.0 kbps' }
+      ],
+      defaultModeIndex: 1, // 13.2 kbps
+      supportsDtx: true,
+      defaultDtx: false,
+      fileExtension: 'evs',
+      filenameTemplate: '{base}.EVS{band}r{rate}{dtx}',
+      fileMagic: new Uint8Array([0x23, 0x21, 0x45, 0x56, 0x53, 0x5f, 0x4d, 0x43, 0x31, 0x2e, 0x30, 0x0a]), // #!EVS_MC1.0\n
+      channelCountHeader: true,
+      docUrl: 'https://www.3gpp.org/ftp/Specs/archive/26_series/26.445/',
+      docTitle: '3GPP TS 26.445',
+      description: '3GPP TS 26.445: Enhanced Voice Services (EVS) Super-Wideband (32 kHz) operating from 9.6 to 128 kbps for 5G/VoNR.'
     });
 
     // 8. G.729 / G.729A
