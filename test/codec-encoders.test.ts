@@ -14,6 +14,7 @@ import { G726Decoder } from '../src/decoders/G726Decoder.ts';
 import { G729Encoder } from '../src/encoders/G729Encoder.ts';
 import { G729Decoder } from '../src/decoders/G729Decoder.ts';
 import { EvsEncoder } from '../src/encoders/EvsEncoder.ts';
+import { EvsDecoder } from '../src/decoders/EvsDecoder.ts';
 import { AmrNbEncoder } from '../src/encoders/AmrNbEncoder.ts';
 import { AmrWbEncoder } from '../src/encoders/AmrWbEncoder.ts';
 import { AmrDecoder } from '../src/decoders/AmrDecoder.ts';
@@ -190,6 +191,22 @@ describe('Phase 2: Codec Encoders & Raw Clip Processing Pipeline', () => {
     assert.strictEqual(packagedEvs.data[14], 0);
     assert.strictEqual(packagedEvs.data[15], 1);
     assert.strictEqual(packagedEvs.suggestedFilename, 'test_evs.EVSWBr96dtx');
+
+    // 4. EVS-NB
+    const evsNbProfile = CodecProfileRegistry.get('evs-nb')!;
+    assert.ok(evsNbProfile);
+    const evsNbFrames = [new Uint8Array(25)]; // ToC 0x03 + 24 payload (9.6 kbps)
+    evsNbFrames[0][0] = 0x03;
+    const packagedEvsNb = RawClipPackager.package(evsNbProfile, evsNbFrames, {
+      baseFilename: 'test_evs_nb.wav',
+      modeRateLabel: '96',
+      dtxEnabled: false,
+      bandwidth: 'NB',
+    });
+    assert.strictEqual(packagedEvsNb.data.length, 16 + 25);
+    assert.strictEqual(packagedEvsNb.suggestedFilename, 'test_evs_nb.EVSNBr96');
+    assert.strictEqual(packagedEvsNb.telemetry.sampleRate, 8000);
+    assert.strictEqual(packagedEvsNb.telemetry.bandwidth, 'NB');
   });
 
   it('AudioPreprocessor handles channel downmixing, resampling, DC removal, and duration adjustments', () => {
@@ -257,6 +274,24 @@ describe('Phase 2: Codec Encoders & Raw Clip Processing Pipeline', () => {
     // Mode 8 has 1-byte ToC (0x38) + 60 bytes payload = 61 bytes
     assert.strictEqual(ioFrames[0].length, 61);
     assert.strictEqual(ioFrames[0][0], 0x38, 'ToC for AMR-WB IO 23.85 kbps is 0x38');
+
+    // 3. Primary 9.6 kbps Narrowband (8 kHz)
+    const pcm8k = new Int16Array(8000 * 0.1); // 100 ms @ 8 kHz = 5 frames
+    for (let i = 0; i < pcm8k.length; i++) {
+      pcm8k[i] = Math.round(10000 * Math.sin((2 * Math.PI * 400 * i) / 8000));
+    }
+    const nbFrames = await EvsEncoder.encode(pcm8k, {
+      sampleRate: 8000,
+      bitrateBps: 9600,
+      bandwidth: 'NB',
+      dtx: false,
+    });
+    assert.strictEqual(nbFrames.length, 5, 'Must produce exactly 5 frames for 100ms NB');
+    assert.strictEqual(nbFrames[0].length, 25);
+    assert.strictEqual(nbFrames[0][0], 0x03, 'ToC for primary 9.6 kbps NB is 0x03');
+    const decodedNb = await EvsDecoder.decodePayloads(nbFrames, true, 8000);
+    assert.strictEqual(decodedNb.sampleRate, 8000);
+    assert.strictEqual(decodedNb.pcm.length, 800);
   });
 
   it('AmrNbEncoder encodes 8 kHz speech with RFC 4867 ToC and decodes bit-exact', async () => {
@@ -436,7 +471,7 @@ describe('Phase 2: Codec Encoders & Raw Clip Processing Pipeline', () => {
   });
 
   it('CodecProfileRegistry defines valid documentation links and descriptions for all telephony profiles', () => {
-    const requiredProfiles = ['g711u', 'g711a', 'g722', 'g726', 'amr-nb', 'amr-wb', 'evs', 'g729'];
+    const requiredProfiles = ['g711u', 'g711a', 'g722', 'g726', 'amr-nb', 'amr-wb', 'evs', 'evs-nb', 'g729'];
     for (const id of requiredProfiles) {
       const profile = CodecProfileRegistry.get(id);
       assert.ok(profile, `Profile ${id} must exist in registry`);

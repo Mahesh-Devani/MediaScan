@@ -184,7 +184,35 @@ export class CodecProfileRegistry {
       description: '3GPP TS 26.171 / ITU-T G.722.2: Adaptive Multi-Rate Wideband HD Voice codec (16 kHz, 6.6–23.85 kbps). Standard for 3G/VoLTE HD Voice.'
     });
 
-    // 7. EVS (3GPP TS 26.445 Enhanced Voice Services)
+    // 7. EVS-NB (3GPP TS 26.445 Enhanced Voice Services Narrowband)
+    this.register({
+      id: 'evs-nb',
+      name: 'EVS (3GPP Enhanced Voice Services)',
+      sampleRate: 8000,
+      bandwidth: 'NB',
+      frameDurationMs: 20,
+      modes: [
+        { modeId: 'evs_5_9',  bitrateKbps: 5.9,   rateLabel: '59',   framePayloadBytes: 15,  tocByte: 0x00, description: 'Primary 5.9 kbps' },
+        { modeId: 'evs_7_2',  bitrateKbps: 7.2,   rateLabel: '72',   framePayloadBytes: 18,  tocByte: 0x01, description: 'Primary 7.2 kbps' },
+        { modeId: 'evs_8_0',  bitrateKbps: 8.0,   rateLabel: '80',   framePayloadBytes: 20,  tocByte: 0x02, description: 'Primary 8.0 kbps' },
+        { modeId: 'evs_9_6',  bitrateKbps: 9.6,   rateLabel: '96',   framePayloadBytes: 24,  tocByte: 0x03, description: 'Primary 9.6 kbps (Standard VoLTE NB)' },
+        { modeId: 'evs_13_2', bitrateKbps: 13.2,  rateLabel: '132',  framePayloadBytes: 33,  tocByte: 0x04, description: 'Primary 13.2 kbps' },
+        { modeId: 'evs_16_4', bitrateKbps: 16.4,  rateLabel: '164',  framePayloadBytes: 41,  tocByte: 0x05, description: 'Primary 16.4 kbps' },
+        { modeId: 'evs_24_4', bitrateKbps: 24.4,  rateLabel: '244',  framePayloadBytes: 61,  tocByte: 0x06, description: 'Primary 24.4 kbps' },
+      ],
+      defaultModeIndex: 3, // 9.6 kbps
+      supportsDtx: true,
+      defaultDtx: false,
+      fileExtension: 'evs',
+      filenameTemplate: '{base}.EVS{band}r{rate}{dtx}',
+      fileMagic: new Uint8Array([0x23, 0x21, 0x45, 0x56, 0x53, 0x5f, 0x4d, 0x43, 0x31, 0x2e, 0x30, 0x0a]), // #!EVS_MC1.0\n
+      channelCountHeader: true,
+      docUrl: 'https://www.3gpp.org/ftp/Specs/archive/26_series/26.445/',
+      docTitle: '3GPP TS 26.445',
+      description: '3GPP TS 26.445: Enhanced Voice Services (EVS) Narrowband (8 kHz) operating from 5.9 to 24.4 kbps for VoLTE/5G.'
+    });
+
+    // 8. EVS (3GPP TS 26.445 Enhanced Voice Services Wideband)
     this.register({
       id: 'evs',
       name: 'EVS (3GPP Enhanced Voice Services)',
@@ -293,6 +321,7 @@ export class CodecProfileRegistry {
   }
 
   public static get(id: string): CodecProfile | undefined {
+    if (id === 'evs-wb') return this.profiles.get('evs');
     return this.profiles.get(id);
   }
 
