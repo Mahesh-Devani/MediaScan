@@ -132,9 +132,14 @@ MediaScan is a high-performance, browser-native web application for analyzing, v
 
 ## Quick Start
 
+### Prerequisites
+- **Node.js**: Requires **Node.js >= 22.6.0** (Node 22 LTS or Node 24) for native experimental TypeScript test stripping.
+  - *macOS*: `brew install node@22` or `nvm install 22 && nvm use 22`
+  - *Linux / Windows*: Install Node 22 LTS via package manager or [nodejs.org](https://nodejs.org/)
+
 ### Installation
 ```bash
-git clone https://github.com/<your-username>/MediaScan.git
+git clone https://github.com/Mahesh-Devani/MediaScan.git
 cd MediaScan
 npm install
 ```
@@ -142,11 +147,13 @@ npm install
 ### Development Server
 ```bash
 npm run dev
+# Starts Vite development server at http://localhost:5173/
 ```
 
 ### Running Test Suite
 ```bash
 npm test
+# Runs 222+ tests via native Node.js test runner with zero external test runners
 ```
 
 ### Production Build
@@ -156,6 +163,8 @@ npm run preview
 ```
 
 The compiled application is generated in `dist/` and can be hosted statically on any web server or GitHub Pages.
+
+For detailed architecture, data models, developer memory, and cross-platform notes, see [AGENTS.md](AGENTS.md).
 
 ---
 
